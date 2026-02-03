@@ -48,7 +48,7 @@ class _TechnicianHistoryScreenState extends State<TechnicianHistoryScreen> {
       'btn_close': 'Close',
     },
   };
-
+  
   final Map<String, String> _categoryEnMap = {
     'แจ้งซ่อมทั่วไป': 'General Repair',
     'ไฟฟ้า/ประปา': 'Electric/Water',

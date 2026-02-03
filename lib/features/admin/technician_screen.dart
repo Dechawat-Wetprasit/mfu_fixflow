@@ -381,7 +381,7 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
   Future<String?> _uploadEvidenceImage(File imageFile) async {
     try {
       final fileName = 'job_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final path = '$fileName'; // อัปโหลดลง root หรือตาม policy
+      final path = fileName; // อัปโหลดลง root หรือตาม policy
       await supabase.storage.from('job_evidence').upload(path, imageFile);
       return supabase.storage.from('job_evidence').getPublicUrl(path);
     } catch (e) {
