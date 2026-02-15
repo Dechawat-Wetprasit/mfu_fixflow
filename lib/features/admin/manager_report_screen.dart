@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/date_symbol_data_local.dart'; // ✅ 1. เพิ่ม Import นี้
+import 'package:intl/date_symbol_data_local.dart';
 
 class ManagerReportScreen extends StatefulWidget {
   const ManagerReportScreen({super.key});
@@ -13,6 +13,11 @@ class ManagerReportScreen extends StatefulWidget {
 
 class _ManagerReportScreenState extends State<ManagerReportScreen> {
   final supabase = Supabase.instance.client;
+
+  // --- UI PALETTE (Theme Colors) ---
+  final Color _gradStart = const Color(0xFF8E24AA); // Purple Vibrant
+  final Color _gradEnd = const Color(0xFF4A148C);   // Deep Purple
+  final Color _bgColor = const Color(0xFFF5F6FA);   // Soft Gray
 
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
@@ -77,7 +82,6 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ 2. เพิ่ม initializeDateFormatting ตรงนี้
     initializeDateFormatting().then((_) {
       if (mounted) {
         _loadLanguage();
@@ -158,6 +162,21 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
       lastDate: DateTime(2030),
       helpText: tr('pick_help'),
       locale: Locale(_currentLanguageCode),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: _gradStart,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: _gradStart),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -167,111 +186,173 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
     }
   }
 
+  // --- UI Build ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppBar(
-        title: Text(
-          tr('title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildMonthSelector(),
-            const SizedBox(height: 20),
-
-            _buildStatusSummary(),
-            const SizedBox(height: 20),
-
-            _buildTotalCard(),
-            const SizedBox(height: 20),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                tr('category_header'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+      backgroundColor: _bgColor,
+      body: Stack(
+        children: [
+          // 1. Background Header
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_gradStart, _gradEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
             ),
-            const SizedBox(height: 10),
+          ),
 
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _stats.isEmpty
-                  ? Center(
-                      child: Text(
-                        tr('no_data'),
-                        style: TextStyle(color: Colors.grey[500]),
+          SafeArea(
+            child: Column(
+              children: [
+                // 2. Custom AppBar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
                       ),
-                    )
-                  : ListView.separated(
-                      itemCount: _stats.length,
-                      separatorBuilder: (c, i) => const SizedBox(height: 15),
-                      itemBuilder: (context, index) {
-                        String key = _stats.keys.elementAt(index);
-                        int value = _stats[key]!;
-                        return _buildStatItem(key, value);
-                      },
-                    ),
+                      const SizedBox(width: 10),
+                      Text(
+                        tr('title'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. Content
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              _buildMonthSelector(),
+                              const SizedBox(height: 20),
+
+                              _buildStatusSummary(),
+                              const SizedBox(height: 20),
+
+                              _buildTotalCard(),
+                              const SizedBox(height: 25),
+
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  tr('category_header'),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 15),
+
+                              if (_stats.isEmpty)
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(30),
+                                    child: Column(
+                                      children: [
+                                        Icon(Icons.bar_chart_outlined, size: 60, color: Colors.grey[300]),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          tr('no_data'),
+                                          style: TextStyle(color: Colors.grey[500]),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              else
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _stats.length,
+                                  separatorBuilder: (c, i) => const SizedBox(height: 15),
+                                  itemBuilder: (context, index) {
+                                    String key = _stats.keys.elementAt(index);
+                                    int value = _stats[key]!;
+                                    return _buildStatItem(key, value);
+                                  },
+                                ),
+                              const SizedBox(height: 30),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+
+  // --- Widgets ---
 
   Widget _buildMonthSelector() {
     return GestureDetector(
       onTap: _pickMonth,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: const [
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 5,
-              offset: Offset(0, 3),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              tr('month_label'),
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
             Row(
               children: [
-                Text(
-                  DateFormat(
-                    'MMMM yyyy',
-                    _currentLanguageCode,
-                  ).format(_selectedDate),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.purple,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _gradStart.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(Icons.calendar_month, color: _gradStart),
                 ),
-                const SizedBox(width: 5),
-                const Icon(Icons.calendar_month, color: Colors.purple),
+                const SizedBox(width: 15),
+                Text(
+                  tr('month_label'),
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
               ],
+            ),
+            Text(
+              DateFormat(
+                'MMMM yyyy',
+                _currentLanguageCode,
+              ).format(_selectedDate),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _gradStart,
+              ),
             ),
           ],
         ),
@@ -286,25 +367,25 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
           child: _buildStatusCard(
             tr('completed'),
             _completedCount,
-            Colors.green,
+            const Color(0xFF43A047), // Green
             Icons.check_circle_outline,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: _buildStatusCard(
             tr('pending'),
             _pendingCount,
-            Colors.orange,
+            const Color(0xFFFF9800), // Orange
             Icons.hourglass_empty,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: _buildStatusCard(
             tr('rejected'),
             _rejectedCount,
-            Colors.red,
+            const Color(0xFFE53935), // Red
             Icons.cancel_outlined,
           ),
         ),
@@ -314,34 +395,34 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
 
   Widget _buildStatusCard(String title, int count, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 15),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 5),
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 8),
           Text(
             "$count",
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -354,17 +435,19 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
   Widget _buildTotalCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7B1FA2), Color(0xFF4A148C)],
+        gradient: LinearGradient(
+          colors: [_gradStart, _gradEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: _gradEnd.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -378,24 +461,24 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
                 tr('total_title'),
                 style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 8),
               Text(
                 "$_totalJobs ${tr('items_unit')}",
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.analytics, color: Colors.white, size: 30),
+            child: const Icon(Icons.analytics_outlined, color: Colors.white, size: 32),
           ),
         ],
       ),
@@ -405,10 +488,17 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
   Widget _buildStatItem(String category, int count) {
     double percentage = _totalJobs == 0 ? 0 : count / _totalJobs;
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -421,31 +511,36 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: Colors.black87,
                 ),
               ),
               Text(
                 "$count ${tr('times_unit')}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.purple,
+                  color: _gradStart,
+                  fontSize: 16,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: percentage,
-              minHeight: 10,
-              backgroundColor: Colors.grey[200],
+              minHeight: 8,
+              backgroundColor: Colors.grey[100],
               color: _getBarColor(percentage),
             ),
           ),
-          const SizedBox(height: 5),
-          Text(
-            "${(percentage * 100).toStringAsFixed(1)}%",
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              "${(percentage * 100).toStringAsFixed(1)}%",
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
           ),
         ],
       ),
@@ -453,8 +548,8 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
   }
 
   Color _getBarColor(double percentage) {
-    if (percentage > 0.5) return Colors.red;
-    if (percentage > 0.25) return Colors.orange;
-    return Colors.green;
+    if (percentage > 0.5) return const Color(0xFFE53935); // Red
+    if (percentage > 0.25) return const Color(0xFFFF9800); // Orange
+    return const Color(0xFF43A047); // Green
   }
 }

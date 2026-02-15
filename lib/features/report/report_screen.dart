@@ -19,17 +19,28 @@ class _ReportScreenState extends State<ReportScreen> {
 
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _dormCtrl = TextEditingController();
   final _roomCtrl = TextEditingController();
 
   File? _imageFile;
   bool _isLoading = false;
   final supabase = Supabase.instance.client;
 
-  // 🔥 Selected Category Variable
+  // FEATURE: Selected Category Variable
   String? _selectedCategory;
 
-  // 🔥 Category List (Keys for translation)
+  // FEATURE: Selected Dorm Building Variable
+  String? _selectedDorm;
+
+  // FEATURE: Dorm Buildings List
+  final List<String> _dormBuildings = [
+    'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
+    'Sak thong 1', 'Sak thong 2',
+    'Prasert',
+    'Polgenpao',
+  ];
+
+  // FEATURE: Category List (Keys for translation)
   final List<String> _categories = [
     'cat_water',
     'cat_electric',
@@ -39,7 +50,7 @@ class _ReportScreenState extends State<ReportScreen> {
     'cat_other',
   ];
 
-  // 🔥 Dictionary for translations
+  // FEATURE: Dictionary for translations
   late Map<String, Map<String, String>> _translations;
 
   @override
@@ -133,7 +144,13 @@ class _ReportScreenState extends State<ReportScreen> {
       }
 
       _phoneCtrl.text = prefs.getString('saved_phone') ?? '';
-      _dormCtrl.text = prefs.getString('saved_dorm') ?? '';
+      
+      // Load saved dorm as selected value
+      String? savedDorm = prefs.getString('saved_dorm');
+      if (savedDorm != null && savedDorm.isNotEmpty && _dormBuildings.contains(savedDorm)) {
+        _selectedDorm = savedDorm;
+      }
+      
       _roomCtrl.text = prefs.getString('saved_room') ?? '';
     });
   }
@@ -141,7 +158,7 @@ class _ReportScreenState extends State<ReportScreen> {
   Future<void> _saveDataLocally() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_phone', _phoneCtrl.text);
-    await prefs.setString('saved_dorm', _dormCtrl.text);
+    await prefs.setString('saved_dorm', _selectedDorm ?? '');
     await prefs.setString('saved_room', _roomCtrl.text);
   }
 
@@ -153,16 +170,47 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
+  void _showCustomNotification(String message, {bool isSuccess = true}) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isSuccess ? Icons.check_circle_outline : Icons.error_outline,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isSuccess
+            ? const Color(0xFF43A047)
+            : const Color(0xFFE53935),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+        elevation: 6,
+      ),
+    );
+  }
+
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(tr('msg_no_photo')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showCustomNotification(tr('msg_no_photo'), isSuccess: false);
       return;
     }
 
@@ -187,29 +235,34 @@ class _ReportScreenState extends State<ReportScreen> {
 
       await supabase.from('tickets').insert({
         'user_id': user.id,
-        'category': categoryToSave, // 🔥 Save selected category
+        'category': categoryToSave,
         'description': _descCtrl.text.trim(),
         'status': 'pending',
         'image_url': imageUrl,
         'contact_name': _nameCtrl.text.trim(),
         'contact_phone': _phoneCtrl.text.trim(),
-        'dorm_building': _dormCtrl.text.trim(),
+        'dorm_building': _selectedDorm ?? '',
         'room_number': _roomCtrl.text.trim(),
       });
 
+      // ✅ บันทึกลง room_logs เมื่อแจ้งซ่อม
+      final fullRoomNumber = "${_selectedDorm ?? ''}${_roomCtrl.text.trim()}";
+      await supabase.from('room_logs').insert({
+        'room_number': fullRoomNumber,
+        'title': categoryToSave,
+        'status': 'รอตรวจสอบ',
+        'performed_by': _nameCtrl.text.trim(),
+        'log_date': DateTime.now().toIso8601String(),
+      });
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tr('msg_success')),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+        _showCustomNotification(tr('msg_success'), isSuccess: true);
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) Navigator.pop(context);
+        });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      _showCustomNotification('Error: $e', isSuccess: false);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -218,205 +271,267 @@ class _ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(tr('title')),
+        title: Text(
+          tr('title'),
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            fontSize: 18,
+          ),
+        ),
         backgroundColor: const Color(0xFFA51C30),
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                tr('section_user'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFA51C30),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              TextFormField(
-                controller: _nameCtrl,
-                readOnly: true,
-                style: TextStyle(color: Colors.grey[700]),
-                decoration: _inputDecor(
-                  tr('label_name'),
-                  Icons.person,
-                ).copyWith(filled: true, fillColor: Colors.grey[200]),
-              ),
-
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _phoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: _inputDecor(tr('label_phone'), Icons.phone),
-                validator: (v) => v!.isEmpty ? tr('err_phone') : null,
-              ),
-              const SizedBox(height: 10),
-              Row(
+              // --- Reporter Info Card ---
+              _buildModernCard(
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _dormCtrl,
-                      decoration: _inputDecor(
-                        tr('label_dorm'),
-                        Icons.apartment,
-                      ),
-                      validator: (v) => v!.isEmpty ? tr('err_dorm') : null,
+                  _buildCardHeader(
+                    icon: Icons.person_rounded,
+                    iconColor: const Color(0xFFA51C30),
+                    title: tr('section_user'),
+                    subtitle: 'ข้อมูล',
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _nameCtrl,
+                    readOnly: true,
+                    style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
+                    decoration: _inputDecor(tr('label_name'), Icons.person).copyWith(
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _roomCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: _inputDecor(
-                        tr('label_room'),
-                        Icons.meeting_room,
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: _inputDecor(tr('label_phone'), Icons.phone_rounded)
+                        .copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                    style: const TextStyle(fontSize: 12),
+                    validator: (v) => v!.isEmpty ? tr('err_phone') : null,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _selectedDorm,
+                          decoration: _inputDecor(tr('label_dorm'), Icons.apartment_rounded)
+                              .copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                          hint: const Text('เลือก', style: TextStyle(fontSize: 12)),
+                          isExpanded: true,
+                          items: _dormBuildings.map((String dorm) {
+                            return DropdownMenuItem<String>(
+                              value: dorm,
+                              child: Text(dorm, style: const TextStyle(fontSize: 12)),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() => _selectedDorm = newValue);
+                          },
+                          validator: (value) => value == null ? tr('err_dorm') : null,
+                        ),
                       ),
-                      validator: (v) => v!.isEmpty ? tr('err_room') : null,
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _roomCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: _inputDecor(tr('label_room'), Icons.meeting_room_rounded)
+                              .copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                          style: const TextStyle(fontSize: 12),
+                          validator: (v) => v!.isEmpty ? tr('err_room') : null,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
 
-              const Divider(height: 40),
+              const SizedBox(height: 10),
 
-              Row(
+              // --- Issue Details Card ---
+              _buildModernCard(
                 children: [
-                  Text(
-                    tr('section_issue'),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  _buildCardHeader(
+                    icon: Icons.build_rounded,
+                    iconColor: const Color(0xFF4285F4),
+                    title: tr('section_issue'),
+                    subtitle: 'ปัญหา',
+                    isRequired: true,
                   ),
-                  const Text(
-                    " *",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedCategory,
+                    decoration: _inputDecor(tr('label_category'), Icons.category_rounded)
+                        .copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+                    hint: Text(tr('hint_category'), style: const TextStyle(fontSize: 12)),
+                    items: _categories.map((String key) {
+                      return DropdownMenuItem<String>(
+                        value: key,
+                        child: Text(tr(key), style: const TextStyle(fontSize: 12)),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() => _selectedCategory = newValue);
+                    },
+                    validator: (value) => value == null ? tr('err_category') : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descCtrl,
+                    maxLines: 2,
+                    minLines: 2,
+                    decoration: _inputDecor(tr('hint_issue'), Icons.description_rounded)
+                        .copyWith(
+                          hintStyle: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                    style: const TextStyle(fontSize: 12),
+                    validator: (v) => v!.isEmpty ? tr('err_issue') : null,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-
-              // 🔥 Dropdown Category
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: _inputDecor(tr('label_category'), Icons.category),
-                hint: Text(tr('hint_category')),
-                items: _categories.map((String key) {
-                  return DropdownMenuItem<String>(
-                    value: key,
-                    child: Text(tr(key)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategory = newValue;
-                  });
-                },
-                validator: (value) => value == null ? tr('err_category') : null,
-              ),
 
               const SizedBox(height: 10),
 
-              TextFormField(
-                controller: _descCtrl,
-                maxLines: 3,
-                decoration: _inputDecor(tr('hint_issue'), Icons.build),
-                validator: (v) => v!.isEmpty ? tr('err_issue') : null,
-              ),
-              const SizedBox(height: 20),
-
-              Container(
-                decoration: BoxDecoration(
-                  border: _imageFile == null
-                      ? Border.all(color: Colors.red.withOpacity(0.5), width: 1)
-                      : null,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    ElevatedButton.icon(
+              // --- Photo Section Card ---
+              _buildModernCard(
+                children: [
+                  _buildCardHeader(
+                    icon: Icons.camera_alt_rounded,
+                    iconColor: const Color(0xFFA51C30),
+                    title: 'ภาพประกอบ',
+                    subtitle: 'จำเป็น',
+                    isRequired: true,
+                  ),
+                  const SizedBox(height: 12),
+                  if (_imageFile != null)
+                    Column(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.file(
+                                  _imageFile!,
+                                  height: 240,
+                                  width: double.infinity,
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.center,
+                                ),
+                              ),
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: InkWell(
+                                  onTap: () => setState(() => _imageFile = null),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red[600],
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 6),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.close, size: 18, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
                       onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
+                      icon: const Icon(Icons.camera_alt_rounded, size: 16),
                       label: Text(
                         _imageFile == null ? tr('btn_photo') : tr('btn_retake'),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _imageFile == null
-                            ? Colors.red[50]
-                            : Colors.grey[200],
-                        foregroundColor: _imageFile == null
-                            ? Colors.red
-                            : Colors.black,
+                        backgroundColor: _imageFile == null ? Colors.red[600] : Colors.amber[600],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    if (_imageFile != null)
-                      Stack(
-                        alignment: Alignment.topRight,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              _imageFile!,
-                              height: 100,
-                              width: 100,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () => setState(() => _imageFile = null),
-                            child: const CircleAvatar(
-                              radius: 10,
-                              backgroundColor: Colors.red,
-                              child: Icon(
-                                Icons.close,
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Text(
-                        tr('err_photo_req'),
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 30),
 
+              const SizedBox(height: 12),
+
+              // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 44,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submitReport,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFA51C30),
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[400],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 2,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          tr('btn_submit'),
-                          style: const TextStyle(fontSize: 18),
+                      ? SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation(Colors.grey[700]),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.send_rounded, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              tr('btn_submit'),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ),
+
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -424,11 +539,201 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
+  Widget _buildCardHeader({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    bool isRequired = false,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [iconColor, Color.lerp(iconColor, Colors.black, 0.15)!],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: Colors.white),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  if (isRequired)
+                    const Text(
+                      ' *',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.red,
+                      ),
+                    ),
+                ],
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernCard({required List<Widget> children}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required Color borderColor,
+    bool isRequired = false,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(
+          top: BorderSide(color: borderColor, width: 3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [iconColor, Color.lerp(iconColor, Colors.black, 0.2)!],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        if (isRequired) const SizedBox(width: 3),
+                        if (isRequired)
+                          const Text(
+                            '*',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.red,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   InputDecoration _inputDecor(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: Colors.grey),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      prefixIcon: Icon(icon, size: 16, color: Colors.grey[600]),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFA51C30), width: 1.5),
+      ),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        color: Colors.grey[600],
+        fontWeight: FontWeight.w500,
+      ),
       filled: true,
       fillColor: Colors.white,
     );

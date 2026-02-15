@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+// Import หน้าจอปลายทางต่างๆ
 import 'package:mfu_fixflow/features/dashboard/home_screen.dart';
 import 'package:mfu_fixflow/features/admin/technician_screen.dart';
 import 'package:mfu_fixflow/features/admin/manager_screen.dart';
+import 'package:mfu_fixflow/features/admin/user_management_screen.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
@@ -14,94 +15,85 @@ class RoleSelectionScreen extends StatefulWidget {
 }
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  final supabase = Supabase.instance.client;
+  final _supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
-    // เรียกหลังจาก build เสร็จเพื่อความปลอดภัย
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkRoleAndRedirect();
-    });
+    // รอให้ Widget สร้างเสร็จก่อนค่อยเริ่มเช็คข้อมูล
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resolveRedirect());
   }
 
-  Future<void> _checkRoleAndRedirect() async {
-    final session = supabase.auth.currentSession;
-
-    // 1. ถ้าไม่มี Session ให้กลับไปหน้า Login
+  /// ฟังก์ชันหลักสำหรับตัดสินใจว่าจะพา User ไปหน้าไหน
+  Future<void> _resolveRedirect() async {
+    final session = _supabase.auth.currentSession;
+    
+    // 1. ถ้าไม่มี Session (ไม่ได้ล็อกอิน) ให้ดีดกลับไปหน้า Login
     if (session == null) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
+      _navigateTo(const LoginScreen());
       return;
     }
 
     final user = session.user;
     final email = user.email ?? '';
+    final metadata = user.userMetadata;
+    final role = metadata?['role'] as String?; // ดึงค่า role จาก DB
 
-    // 2. เช็ค Domain (ป้องกันคนนอก)
-    bool isStudent = email.endsWith('@lamduan.mfu.ac.th');
-    bool isStaff = email.endsWith('@mfu.ac.th');
+    // 2. ตรวจสอบ Domain (Security Check)
+    // อนุญาตเฉพาะเมล @mfu.ac.th (บุคลากร) และ @lamduan.mfu.ac.th (นักศึกษา)
+    final isStaff = email.endsWith('@mfu.ac.th');
+    final isStudent = email.endsWith('@lamduan.mfu.ac.th');
 
-    // *สำหรับการทดสอบ: อนุญาต gmail ทั่วไปได้ถ้าต้องการ (ลบออกเมื่อขึ้น Production)*
-    // bool isTestUser = email.endsWith('@gmail.com');
-
-    if (!isStudent && !isStaff) {
-      if (mounted) {
-        _showErrorDialog("อีเมล $email ไม่ได้รับอนุญาตให้ใช้งานระบบนี้");
-      }
+    if (!isStaff && !isStudent) {
+      if (mounted) _showAccessDeniedDialog(email);
       return;
     }
 
-    // 3. กำหนดหน้าปลายทาง (Routing)
+    // 3. Routing Logic: เลือกหน้าตาม Role
     Widget targetScreen;
 
-    // TODO: แนะนำให้เปลี่ยนไปเช็คจาก Table 'profiles' ใน Database แทนการ Hardcode
-    if (email == 'manager@mfu.ac.th') {
+    if (role == 'admin' || role == 'it_admin') {
+      // Admin และ IT Admin ไปหน้า User Management โดยตรง
+      targetScreen = const UserManagementScreen();
+    } else if (role == 'manager') {
       targetScreen = const ManagerScreen();
-    } else if (email == 'tech@mfu.ac.th') {
+    } else if (role == 'head_technician' || role == 'technician') {
       targetScreen = const TechnicianScreen();
     } else {
-      // Default: นักศึกษา หรือ Staff ทั่วไปที่ไม่ได้เป็น Tech/Manager
+      // Default: ถ้าไม่ระบุ Role หรือเป็น role อื่นๆ ให้ไปหน้า Student/Home
       targetScreen = const HomeScreen();
     }
 
-    if (mounted) {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => targetScreen));
-    }
+    // 4. ไปยังหน้าปลายทาง
+    _navigateTo(targetScreen);
   }
 
-  void _logout() async {
-    await supabase.auth.signOut();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+  void _navigateTo(Widget screen) {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => screen),
+    );
   }
 
-  void _showErrorDialog(String message) {
+  Future<void> _logout() async {
+    await _supabase.auth.signOut();
+    _navigateTo(const LoginScreen());
+  }
+
+  void _showAccessDeniedDialog(String email) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (c) => AlertDialog(
-        title: const Text("ไม่สามารถเข้าใช้งานได้"),
-        content: Text(message),
+      builder: (context) => AlertDialog(
+        title: const Text("Access Denied"),
+        content: Text("อีเมล $email ไม่ได้รับอนุญาตให้เข้าใช้งานระบบนี้"),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(c);
+              Navigator.pop(context);
               _logout();
             },
-            child: const Text(
-              "ตกลง (ออกจากระบบ)",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("ออกจากระบบ", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -110,17 +102,24 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // UI หน้า Loading ระหว่างรอตรวจสอบสิทธิ์
     return const Scaffold(
-      backgroundColor: Color(0xFFA51C30),
+      backgroundColor: Color(0xFFA51C30), // สีธีมแม่ฟ้าหลวง
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 20),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+            SizedBox(height: 24),
             Text(
-              "กำลังตรวจสอบข้อมูลผู้ใช้...",
-              style: TextStyle(color: Colors.white, fontSize: 16),
+              "กำลังตรวจสอบสิทธิ์การเข้าใช้งาน...",
+              style: TextStyle(
+                color: Colors.white, 
+                fontSize: 16, 
+                fontWeight: FontWeight.w500
+              ),
             ),
           ],
         ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "52160041620",
+    "project_id": "mfu-fixflow-7fd13",
+    "storage_bucket": "mfu-fixflow-7fd13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:52160041620:android:d66d0b04cf5679e3ecda81",
+        "android_client_info": {
+          "package_name": "com.example.mfu.fixflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqpssnpI4EhlMZ-h_5BdE8GiHbaUonaCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

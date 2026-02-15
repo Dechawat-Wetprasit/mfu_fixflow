@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // ✅ Import นี้ถูกต้องแล้ว
-// 🔥 Import 2 ไฟล์นี้ เพื่อใช้ระบบตรวจสอบสิทธิ์
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 import 'package:mfu_fixflow/features/auth/role_selection_screen.dart';
+import 'package:mfu_fixflow/supabase_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://vebcqfkgzhkgcryzlrhu.supabase.co',
-    anonKey: 'sb_publishable_BWPg6rBqnEcdcIDb7VDotA_Grh2btCw',
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
   runApp(const MyApp());

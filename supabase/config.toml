@@ -1,0 +1,7 @@
+# Config ระดับโปรเจกต์ (ใช้ร่วมกับ supabase link)
+# ดูรายละเอียด: https://supabase.com/docs/guides/functions/function-configuration
+
+[functions.manage-users]
+# ปิดการ verify JWT ที่ gateway — เรา verify เองใน function (JWKS/Legacy)
+# ถ้าไม่ปิด จะได้ 401 Invalid JWT ก่อน request ถึงโค้ดเรา
+verify_jwt = false

@@ -1,4 +1,4 @@
-package com.example.mfu_fixflow
+package com.example.mfu.fixflow
 
 import io.flutter.embedding.android.FlutterActivity
 

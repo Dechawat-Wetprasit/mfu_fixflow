@@ -1,0 +1,3 @@
+# ปิดการ verify JWT ที่ gateway เพราะเรา verify เองใน function ด้วย JWKS/Legacy
+# ถ้าเปิดไว้ gateway อาจคืน 401 Invalid JWT ก่อนถึงโค้ดเรา
+verify_jwt = false
