@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 import 'package:mfu_fixflow/features/admin/technician_history_screen.dart';
 import 'package:mfu_fixflow/features/admin/materials_tracking_screen.dart';
-import 'package:mfu_fixflow/services/notification_service.dart';
 
 class TechnicianScreen extends StatefulWidget {
   const TechnicianScreen({super.key});
@@ -400,27 +399,7 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
         });
       }
       
-      _showNotification(tr('update_success'));
-
-      // --- FCM Notification API Call ---
-      if (studentId != null) {
-        if (newStatus == 'in_progress') {
-          await NotificationService().sendFCMNotification(
-            targetUserId: studentId,
-            title: "👨‍🔧 ช่างกำลังดำเนินการ",
-            body: "ช่างวิชาชีพกำลังเข้าตรวจสอบและแก้ไขปัญหาให้คุณ",
-            recordId: ticketId.toString()
-          );
-        } else if (newStatus == 'completed') {
-          await NotificationService().sendFCMNotification(
-            targetUserId: studentId,
-            title: "✅ งานซ่อมของคุณเสร็จสิ้นแล้ว!",
-            body: "ช่างได้ดำเนินการแก้ไขปัญหาในห้องของคุณเรียบร้อยแล้ว โปรดตรวจสอบและยืนยัน",
-            recordId: ticketId.toString()
-          );
-        }
-      }
-
+      _showNotification(tr('update_success')); 
       return true;
     } catch (e) {
       debugPrint("Error: $e");
@@ -1116,7 +1095,7 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
             if (isMine) const SizedBox(height: 12),
 
             // FEATURE: Materials Tracking Button
-            if (isMine) SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => MaterialsTrackingScreen(ticketId: ticket['id'], ticketRoom: "${ticket['dorm_building']} ${ticket['room_number']}"))); }, icon: const Icon(Icons.inventory_2), label: Text('เบิกอุปกรณ์'), style: OutlinedButton.styleFrom(foregroundColor: Colors.orange.shade700, padding: const EdgeInsets.symmetric(vertical: 12), side: BorderSide(color: Colors.orange.shade700)))),
+            if (isMine) SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => MaterialsTrackingScreen(ticketId: ticket['id'], ticketRoom: "${ticket['dorm_building']} ${ticket['room_number']}"))); }, icon: const Icon(Icons.inventory_2), label: const Text('เบิกอุปกรณ์'), style: OutlinedButton.styleFrom(foregroundColor: Colors.orange.shade700, padding: const EdgeInsets.symmetric(vertical: 12), side: BorderSide(color: Colors.orange.shade700)))),
             if (isMine) const SizedBox(height: 12),
 
             // Reassign button for head_tech
@@ -1294,17 +1273,17 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
       // Fetch technician names for each material
       Map<String, String> technicianNames = {};
       for (var material in materials) {
-        final technician_id = material['technician_id'];
-        if (technician_id != null && !technicianNames.containsKey(technician_id)) {
+        final technicianId = material['technician_id'];
+        if (technicianId != null && !technicianNames.containsKey(technicianId)) {
           try {
             final tech = await supabase
                 .from('profiles')
                 .select('full_name')
-                .eq('id', technician_id)
+                .eq('id', technicianId)
                 .single();
-            technicianNames[technician_id] = tech['full_name'] ?? 'Unknown';
+            technicianNames[technicianId] = tech['full_name'] ?? 'Unknown';
           } catch (e) {
-            technicianNames[technician_id] = 'Unknown';
+            technicianNames[technicianId] = 'Unknown';
           }
         }
       }
@@ -2070,7 +2049,7 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
                     const SizedBox(height: 25),
                     // Active Jobs Section
                     Text(
-                      '${tr('tech_active_jobs')}',
+                      tr('tech_active_jobs'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

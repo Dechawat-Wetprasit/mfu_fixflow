@@ -1,11 +1,9 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mfu_fixflow/services/notification_service.dart';
 
 class ReportScreen extends StatefulWidget {
   // Receive language code from previous screen (default to 'th')
@@ -90,7 +88,7 @@ class _ReportScreenState extends State<ReportScreen> {
         'err_photo_req': '*ต้องแนบรูปภาพ',
         'btn_submit': 'ส่งแจ้งซ่อม',
         'msg_no_photo': 'กรุณาถ่ายรูปประกอบการแจ้งซ่อม',
-        'msg_success': 'ส่งแจ้งซ่อมเรียบร้อย!',
+        'msg_success': 'ส่งแจ้งซ่อมเรียบร้อย! ✅',
         'err_login': 'กรุณาเข้าสู่ระบบ',
         // Categories
         'cat_water': 'ประปา (น้ำรั่ว/ไม่ไหล)',
@@ -124,7 +122,7 @@ class _ReportScreenState extends State<ReportScreen> {
         'err_photo_req': '*Photo required',
         'btn_submit': 'Submit Report',
         'msg_no_photo': 'Please take a photo of the issue',
-        'msg_success': 'Report submitted successfully!',
+        'msg_success': 'Report submitted successfully! ✅',
         'err_login': 'Please login first',
         // Categories
         'cat_water': 'Plumbing (Leak/No Water)',
@@ -173,31 +171,14 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        imageQuality: 80,
-      );
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = pickedFile;
-        });
-        
-        // Read bytes in the background to prevent UI freezing
-        pickedFile.readAsBytes().then((bytes) {
-          if (mounted) {
-            setState(() {
-              _imageBytes = bytes;
-            });
-          }
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        _showCustomNotification('เกิดข้อผิดพลาดในการเลือกรูปภาพ: $e', isSuccess: false);
-      }
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source, maxWidth: 800);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _imageFile = pickedFile;
+        _imageBytes = bytes;
+      });
     }
   }
 
@@ -289,7 +270,7 @@ class _ReportScreenState extends State<ReportScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_imageFile == null) {
+    if (_imageFile == null || _imageBytes == null) {
       _showCustomNotification(tr('msg_no_photo'), isSuccess: false);
       return;
     }
@@ -304,7 +285,7 @@ class _ReportScreenState extends State<ReportScreen> {
       await _saveDataLocally();
 
       step = 'prepare_file';
-      final bytes = _imageBytes ?? await _imageFile!.readAsBytes();
+      final bytes = _imageBytes!;
       final originalName = _imageFile!.name;
       final fileExt = originalName.contains('.')
           ? originalName.split('.').last
@@ -347,40 +328,9 @@ class _ReportScreenState extends State<ReportScreen> {
         return;
       }
 
-      // --- FCM Notification API Call (แยก try-catch เพื่อไม่ให้กระทบการบันทึก ticket) ---
-      try {
-        debugPrint('[Report FCM] Looking for managers to notify...');
-        final dormBuilding = _selectedDorm ?? '';
-        final roomNum = _roomCtrl.text.trim();
-
-        // ดึง head_manager และ manager ทั้งหมด (ไม่ filter building เพื่อหลีกเลี่ยง column ที่ไม่มี)
-        final profilesResp = await supabase
-            .from('profiles')
-            .select('id, role')
-            .or('role.eq.head_manager,role.eq.manager');
-
-        debugPrint('[Report FCM] Found ${profilesResp.length} manager(s)');
-
-        for (var m in profilesResp) {
-          final managerId = m['id']?.toString() ?? '';
-          if (managerId.isEmpty) continue;
-          debugPrint('[Report FCM] Notifying manager: $managerId (role: ${m['role']})');
-          await NotificationService().sendFCMNotification(
-            targetUserId: managerId,
-            title: "🚨 แจ้งซ่อมใหม่จากลูกบ้าน!",
-            body: "หอพัก $dormBuilding ห้อง $roomNum (หมวดหมู่: $categoryToSave)",
-          );
-        }
-      } catch (e) {
-        // ไม่หยุดกระบวนการ ถ้าแจ้งเตือนล้มเหลว ยังคงดำเนินการต่อ
-        debugPrint('[Report FCM] Notification error (non-fatal): $e');
-      }
-
-
-
       // ✅ บันทึกลง room_logs เมื่อแจ้งซ่อม
       step = 'insert_room_log';
-      final fullRoomNumber = "${_selectedDorm ?? ''}-${_roomCtrl.text.trim()}";
+      final fullRoomNumber = "${_selectedDorm ?? ''}${_roomCtrl.text.trim()}";
       try {
         await supabase.from('room_logs').insert({
           'room_number': fullRoomNumber,
@@ -390,8 +340,7 @@ class _ReportScreenState extends State<ReportScreen> {
           'log_date': DateTime.now().toIso8601String(),
         });
       } catch (e) {
-        _showCustomNotification('Create room log failed ($step): $e', isSuccess: false);
-        return;
+        debugPrint('Create room log failed ($step): $e');
       }
 
       if (mounted) {
@@ -401,7 +350,7 @@ class _ReportScreenState extends State<ReportScreen> {
         });
       }
     } catch (e) {
-      final suffix = kIsWeb ? ' (web)' : '';
+      const suffix = kIsWeb ? ' (web)' : '';
       _showCustomNotification('Error$suffix ($step): $e', isSuccess: false);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -467,7 +416,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: _selectedDorm,
+                          initialValue: _selectedDorm,
                           decoration: _inputDecor(tr('label_dorm'), Icons.apartment_rounded)
                               .copyWith(contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
                           hint: const Text('เลือก', style: TextStyle(fontSize: 12)),
@@ -558,7 +507,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     isRequired: true,
                   ),
                   const SizedBox(height: 12),
-                  if (_imageFile != null)
+                  if (_imageBytes != null)
                     Column(
                       children: [
                         Container(
@@ -576,21 +525,13 @@ class _ReportScreenState extends State<ReportScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
-                                child: kIsWeb
-                                    ? Image.network(
-                                        _imageFile!.path,
-                                        height: 240,
-                                        width: double.infinity,
-                                        fit: BoxFit.contain,
-                                        alignment: Alignment.center,
-                                      )
-                                    : Image.file(
-                                        File(_imageFile!.path),
-                                        height: 240,
-                                        width: double.infinity,
-                                        fit: BoxFit.contain,
-                                        alignment: Alignment.center,
-                                      ),
+                                child: Image.memory(
+                                  _imageBytes!,
+                                  height: 240,
+                                  width: double.infinity,
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.center,
+                                ),
                               ),
                               Positioned(
                                 top: 10,
@@ -626,7 +567,7 @@ class _ReportScreenState extends State<ReportScreen> {
                       onPressed: _showImageSourceSheet,
                       icon: const Icon(Icons.camera_alt_rounded, size: 16),
                       label: Text(
-                        _imageFile == null ? tr('btn_photo') : tr('btn_retake'),
+                        _imageBytes == null ? tr('btn_photo') : tr('btn_retake'),
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
