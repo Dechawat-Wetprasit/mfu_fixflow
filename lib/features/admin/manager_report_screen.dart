@@ -22,6 +22,16 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
   String _currentLanguageCode = 'th';
+  String? _myBuilding;
+  bool _isHeadManager = false;
+
+  final List<String> _buildings = const [
+    'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
+    'Sak thong 1', 'Sak thong 2',
+    'Prasert',
+    'Polgenpao',
+  ];
 
   // Stats Data
   Map<String, int> _stats = {};
@@ -79,15 +89,44 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
     return _categoryEnMap[key] ?? key;
   }
 
+  String? _normalizeBuilding(dynamic rawValue) {
+    if (rawValue == null) return null;
+    final value = rawValue.toString().trim();
+    if (value.isEmpty) return null;
+    if (value.toLowerCase() == 'all') return null;
+
+    for (final building in _buildings) {
+      if (building.toLowerCase() == value.toLowerCase()) {
+        return building;
+      }
+    }
+
+    return value;
+  }
+
   @override
   void initState() {
     super.initState();
     initializeDateFormatting().then((_) {
       if (mounted) {
         _loadLanguage();
-        _generateReport();
+        _loadManagerScopeAndReport();
       }
     });
+  }
+
+  Future<void> _loadManagerScopeAndReport() async {
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      try {
+        final profile = await supabase.from('profiles').select('role,responsible_building').eq('id', user.id).single();
+        final role = (profile['role'] ?? '').toString();
+        _isHeadManager = role == 'head_manager' || role == 'admin' || role == 'it_admin';
+        _myBuilding = _normalizeBuilding(profile['responsible_building']);
+      } catch (_) {}
+    }
+
+    await _generateReport();
   }
 
   Future<void> _loadLanguage() async {
@@ -111,11 +150,17 @@ class _ManagerReportScreenState extends State<ManagerReportScreen> {
     );
 
     try {
-      final data = await supabase
+      dynamic query = supabase
           .from('tickets')
           .select('category, status')
           .gte('created_at', startOfMonth.toIso8601String())
           .lte('created_at', endOfMonth.toIso8601String());
+
+      if (!_isHeadManager && _myBuilding != null && _myBuilding!.isNotEmpty) {
+        query = query.eq('dorm_building', _myBuilding!);
+      }
+
+      final data = await query;
 
       Map<String, int> counts = {};
       int completed = 0;

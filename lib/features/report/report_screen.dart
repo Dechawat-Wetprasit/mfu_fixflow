@@ -1,8 +1,11 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mfu_fixflow/services/notification_service.dart';
 
 class ReportScreen extends StatefulWidget {
   // Receive language code from previous screen (default to 'th')
@@ -21,7 +24,8 @@ class _ReportScreenState extends State<ReportScreen> {
   final _phoneCtrl = TextEditingController();
   final _roomCtrl = TextEditingController();
 
-  File? _imageFile;
+  XFile? _imageFile;
+  Uint8List? _imageBytes;
   bool _isLoading = false;
   final supabase = Supabase.instance.client;
 
@@ -80,10 +84,13 @@ class _ReportScreenState extends State<ReportScreen> {
         'err_issue': 'กรุณาระบุปัญหา',
         'btn_photo': 'ถ่ายรูป (จำเป็น)',
         'btn_retake': 'ถ่ายใหม่',
+        'title_pick_photo': 'เลือกรูป',
+        'btn_camera': 'ถ่ายรูป',
+        'btn_gallery': 'เลือกรูปจากเครื่อง',
         'err_photo_req': '*ต้องแนบรูปภาพ',
         'btn_submit': 'ส่งแจ้งซ่อม',
         'msg_no_photo': 'กรุณาถ่ายรูปประกอบการแจ้งซ่อม',
-        'msg_success': 'ส่งแจ้งซ่อมเรียบร้อย! ✅',
+        'msg_success': 'ส่งแจ้งซ่อมเรียบร้อย!',
         'err_login': 'กรุณาเข้าสู่ระบบ',
         // Categories
         'cat_water': 'ประปา (น้ำรั่ว/ไม่ไหล)',
@@ -111,10 +118,13 @@ class _ReportScreenState extends State<ReportScreen> {
         'err_issue': 'Please describe the issue',
         'btn_photo': 'Take Photo (Required)',
         'btn_retake': 'Retake',
+        'title_pick_photo': 'Select Photo',
+        'btn_camera': 'Camera',
+        'btn_gallery': 'Choose from device',
         'err_photo_req': '*Photo required',
         'btn_submit': 'Submit Report',
         'msg_no_photo': 'Please take a photo of the issue',
-        'msg_success': 'Report submitted successfully! ✅',
+        'msg_success': 'Report submitted successfully!',
         'err_login': 'Please login first',
         // Categories
         'cat_water': 'Plumbing (Leak/No Water)',
@@ -163,11 +173,81 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, maxWidth: 800);
-    if (pickedFile != null) {
-      setState(() => _imageFile = File(pickedFile.path));
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = pickedFile;
+        });
+        
+        // Read bytes in the background to prevent UI freezing
+        pickedFile.readAsBytes().then((bytes) {
+          if (mounted) {
+            setState(() {
+              _imageBytes = bytes;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showCustomNotification('เกิดข้อผิดพลาดในการเลือกรูปภาพ: $e', isSuccess: false);
+      }
     }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  tr('title_pick_photo'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.camera);
+                    },
+                    icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                    label: Text(tr('btn_camera')),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.gallery);
+                    },
+                    icon: const Icon(Icons.photo_library_rounded, size: 18),
+                    label: Text(tr('btn_gallery')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showCustomNotification(String message, {bool isSuccess = true}) {
@@ -215,45 +295,104 @@ class _ReportScreenState extends State<ReportScreen> {
     }
 
     setState(() => _isLoading = true);
-
+    String step = 'init';
     try {
       final user = supabase.auth.currentUser;
       if (user == null) throw tr('err_login');
 
+      step = 'save_local';
       await _saveDataLocally();
 
-      final bytes = await _imageFile!.readAsBytes();
-      final fileExt = _imageFile!.path.split('.').last;
+      step = 'prepare_file';
+      final bytes = _imageBytes ?? await _imageFile!.readAsBytes();
+      final originalName = _imageFile!.name;
+      final fileExt = originalName.contains('.')
+          ? originalName.split('.').last
+          : 'jpg';
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
 
-      await supabase.storage.from('tickets').uploadBinary(fileName, bytes);
-      final imageUrl = supabase.storage.from('tickets').getPublicUrl(fileName);
+      step = 'upload';
+      String imageUrl;
+      try {
+        await supabase.storage.from('tickets').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );
+        imageUrl = supabase.storage.from('tickets').getPublicUrl(fileName);
+      } catch (e) {
+        _showCustomNotification('Upload failed ($step): $e', isSuccess: false);
+        return;
+      }
 
       // Map category key to a readable string for the DB if needed,
       // or just store the translated string. Here storing the translated string.
+      step = 'insert_ticket';
       String categoryToSave = tr(_selectedCategory!);
 
-      await supabase.from('tickets').insert({
-        'user_id': user.id,
-        'category': categoryToSave,
-        'description': _descCtrl.text.trim(),
-        'status': 'pending',
-        'image_url': imageUrl,
-        'contact_name': _nameCtrl.text.trim(),
-        'contact_phone': _phoneCtrl.text.trim(),
-        'dorm_building': _selectedDorm ?? '',
-        'room_number': _roomCtrl.text.trim(),
-      });
+      try {
+        await supabase.from('tickets').insert({
+          'user_id': user.id,
+          'category': categoryToSave,
+          'description': _descCtrl.text.trim(),
+          'status': 'pending',
+          'image_url': imageUrl,
+          'contact_name': _nameCtrl.text.trim(),
+          'contact_phone': _phoneCtrl.text.trim(),
+          'dorm_building': _selectedDorm ?? '',
+          'room_number': _roomCtrl.text.trim(),
+        });
+      } catch (e) {
+        _showCustomNotification('Create ticket failed ($step): $e', isSuccess: false);
+        return;
+      }
+
+      // --- FCM Notification API Call (แยก try-catch เพื่อไม่ให้กระทบการบันทึก ticket) ---
+      try {
+        debugPrint('[Report FCM] Looking for managers to notify...');
+        final dormBuilding = _selectedDorm ?? '';
+        final roomNum = _roomCtrl.text.trim();
+
+        // ดึง head_manager และ manager ทั้งหมด (ไม่ filter building เพื่อหลีกเลี่ยง column ที่ไม่มี)
+        final profilesResp = await supabase
+            .from('profiles')
+            .select('id, role')
+            .or('role.eq.head_manager,role.eq.manager');
+
+        debugPrint('[Report FCM] Found ${profilesResp.length} manager(s)');
+
+        for (var m in profilesResp) {
+          final managerId = m['id']?.toString() ?? '';
+          if (managerId.isEmpty) continue;
+          debugPrint('[Report FCM] Notifying manager: $managerId (role: ${m['role']})');
+          await NotificationService().sendFCMNotification(
+            targetUserId: managerId,
+            title: "🚨 แจ้งซ่อมใหม่จากลูกบ้าน!",
+            body: "หอพัก $dormBuilding ห้อง $roomNum (หมวดหมู่: $categoryToSave)",
+          );
+        }
+      } catch (e) {
+        // ไม่หยุดกระบวนการ ถ้าแจ้งเตือนล้มเหลว ยังคงดำเนินการต่อ
+        debugPrint('[Report FCM] Notification error (non-fatal): $e');
+      }
+
+
 
       // ✅ บันทึกลง room_logs เมื่อแจ้งซ่อม
-      final fullRoomNumber = "${_selectedDorm ?? ''}${_roomCtrl.text.trim()}";
-      await supabase.from('room_logs').insert({
-        'room_number': fullRoomNumber,
-        'title': categoryToSave,
-        'status': 'รอตรวจสอบ',
-        'performed_by': _nameCtrl.text.trim(),
-        'log_date': DateTime.now().toIso8601String(),
-      });
+      step = 'insert_room_log';
+      final fullRoomNumber = "${_selectedDorm ?? ''}-${_roomCtrl.text.trim()}";
+      try {
+        await supabase.from('room_logs').insert({
+          'room_number': fullRoomNumber,
+          'title': categoryToSave,
+          'status': 'รอตรวจสอบ',
+          'performed_by': _nameCtrl.text.trim(),
+          'log_date': DateTime.now().toIso8601String(),
+        });
+      } catch (e) {
+        _showCustomNotification('Create room log failed ($step): $e', isSuccess: false);
+        return;
+      }
 
       if (mounted) {
         _showCustomNotification(tr('msg_success'), isSuccess: true);
@@ -262,7 +401,8 @@ class _ReportScreenState extends State<ReportScreen> {
         });
       }
     } catch (e) {
-      _showCustomNotification('Error: $e', isSuccess: false);
+      final suffix = kIsWeb ? ' (web)' : '';
+      _showCustomNotification('Error$suffix ($step): $e', isSuccess: false);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -436,19 +576,30 @@ class _ReportScreenState extends State<ReportScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
-                                child: Image.file(
-                                  _imageFile!,
-                                  height: 240,
-                                  width: double.infinity,
-                                  fit: BoxFit.contain,
-                                  alignment: Alignment.center,
-                                ),
+                                child: kIsWeb
+                                    ? Image.network(
+                                        _imageFile!.path,
+                                        height: 240,
+                                        width: double.infinity,
+                                        fit: BoxFit.contain,
+                                        alignment: Alignment.center,
+                                      )
+                                    : Image.file(
+                                        File(_imageFile!.path),
+                                        height: 240,
+                                        width: double.infinity,
+                                        fit: BoxFit.contain,
+                                        alignment: Alignment.center,
+                                      ),
                               ),
                               Positioned(
                                 top: 10,
                                 right: 10,
                                 child: InkWell(
-                                  onTap: () => setState(() => _imageFile = null),
+                                  onTap: () => setState(() {
+                                    _imageFile = null;
+                                    _imageBytes = null;
+                                  }),
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
@@ -472,7 +623,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     width: double.infinity,
                     height: 40,
                     child: ElevatedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
+                      onPressed: _showImageSourceSheet,
                       icon: const Icon(Icons.camera_alt_rounded, size: 16),
                       label: Text(
                         _imageFile == null ? tr('btn_photo') : tr('btn_retake'),

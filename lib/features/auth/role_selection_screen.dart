@@ -55,7 +55,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     if (role == 'admin' || role == 'it_admin') {
       // Admin และ IT Admin ไปหน้า User Management โดยตรง
       targetScreen = const UserManagementScreen();
-    } else if (role == 'manager') {
+    } else if (role == 'manager' || role == 'head_manager') {
       targetScreen = const ManagerScreen();
     } else if (role == 'head_technician' || role == 'technician') {
       targetScreen = const TechnicianScreen();

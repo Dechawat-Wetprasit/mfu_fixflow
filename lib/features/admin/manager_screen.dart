@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 import 'package:mfu_fixflow/features/admin/manager_history_screen.dart';
 import 'package:mfu_fixflow/features/admin/manager_report_screen.dart';
+import 'package:mfu_fixflow/services/notification_service.dart';
 class ManagerScreen extends StatefulWidget {
   const ManagerScreen({super.key});
 
@@ -16,6 +17,14 @@ class ManagerScreen extends StatefulWidget {
 
 class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateMixin {
   final supabase = Supabase.instance.client;
+
+  final List<String> _buildings = const [
+    'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
+    'Sak thong 1', 'Sak thong 2',
+    'Prasert',
+    'Polgenpao',
+  ];
 
   // --- UI PALETTE (Vibrant Manager Theme) ---
   final Color _gradStart = const Color(0xFF8E24AA); // Purple Vibrant
@@ -37,6 +46,7 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
   String _managerName = "Loading...";
   String? _managerId;
   String? _myBuilding;
+  bool _isHeadManager = false;
   bool _isProfileLoaded = false;
   String _currentLanguageCode = 'th';
 
@@ -44,6 +54,8 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
     'th': {
       'welcome': 'สวัสดี,',
       'role': 'ผู้จัดการหอพัก',
+      'role_manager': 'ผู้จัดการหอพัก',
+      'role_head_manager': 'หัวหน้าผู้จัดการหอ',
       'building_label': 'ดูแลอาคาร:',
       'list_header': 'รายการแจ้งซ่อมล่าสุด',
       'pending': 'รอตรวจสอบ',
@@ -110,6 +122,8 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
     'en': {
       'welcome': 'Hello,',
       'role': 'Dorm Manager',
+      'role_manager': 'Dorm Manager',
+      'role_head_manager': 'Head Dorm Manager',
       'building_label': 'Area:',
       'list_header': 'Recent Requests',
       'pending': 'To Review',
@@ -177,6 +191,23 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
 
   String tr(String key) => _translations[_currentLanguageCode]?[key] ?? key;
 
+  String _roleTitle() => _isHeadManager ? tr('role_head_manager') : tr('role_manager');
+
+  String? _normalizeBuilding(dynamic rawValue) {
+    if (rawValue == null) return null;
+    final value = rawValue.toString().trim();
+    if (value.isEmpty) return null;
+    if (value.toLowerCase() == 'all') return null;
+
+    for (final building in _buildings) {
+      if (building.toLowerCase() == value.toLowerCase()) {
+        return building;
+      }
+    }
+
+    return value;
+  }
+
   String _formatDateTime(String? iso) {
     if (iso == null) return "-";
     final dt = DateTime.parse(iso).toLocal();
@@ -230,16 +261,19 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
     if (user != null) {
       try {
         final profile = await supabase.from('profiles').select().eq('id', user.id).single();
+        final role = (profile['role'] ?? '').toString();
         setState(() {
           _managerName = profile['full_name'] ?? "Manager";
           _managerId = user.id;
-          _myBuilding = profile['responsible_building'];
+          _myBuilding = _normalizeBuilding(profile['responsible_building']);
+          _isHeadManager = role == 'head_manager' || role == 'admin' || role == 'it_admin';
           _isProfileLoaded = true;
         });
       } catch (e) {
         setState(() {
           _managerName = user.userMetadata?['full_name'] ?? "Manager";
           _managerId = user.id;
+          _isHeadManager = false;
           _isProfileLoaded = true;
         });
       }
@@ -289,6 +323,10 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
   }
 
   Stream<List<Map<String, dynamic>>> _getTicketStream() {
+    if (_isHeadManager) {
+      return supabase.from('tickets').stream(primaryKey: ['id']).order('created_at', ascending: false);
+    }
+
     final building = _myBuilding;
     if (building != null && building.isNotEmpty && building != 'All') {
       return supabase.from('tickets').stream(primaryKey: ['id']).eq('dorm_building', building).order('created_at', ascending: false);
@@ -360,6 +398,7 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
                                       children: [
                                         Text(tr('welcome'), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                                         Text(_managerName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        Text(_roleTitle(), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
                                         Container(
                                           margin: const EdgeInsets.only(top: 2),
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -560,7 +599,34 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
   }
 
   Future<void> _confirmAssign(dynamic ticketId, String techId, String techName) async {
-    try { await supabase.from('tickets').update({'status': 'approved', 'manager_name': _managerName, 'manager_id': _managerId, 'technician_id': techId, 'approved_at': DateTime.now().toIso8601String()}).eq('id', ticketId); if (mounted) _showNotification("${tr('success_assign')} -> $techName"); } catch (e) { debugPrint("Assign Error: $e"); }
+    try { 
+      await supabase.from('tickets').update({'status': 'approved', 'manager_name': _managerName, 'manager_id': _managerId, 'technician_id': techId, 'approved_at': DateTime.now().toIso8601String()}).eq('id', ticketId); 
+      
+      if (mounted) _showNotification("${tr('success_assign')} -> $techName"); 
+
+      // --- FCM Notification API Call ---
+      final ticketData = await supabase.from('tickets').select('user_id, dorm_building, room_number').eq('id', ticketId).single();
+      final reporterId = ticketData['user_id'];
+      
+      // 1. แจ้งช่างที่ได้รับมอบหมาย
+      await NotificationService().sendFCMNotification(
+        targetUserId: techId,
+        title: "🔧 คุณได้รับมอบหมายงานใหม่!",
+        body: "หอพัก ${ticketData['dorm_building']} ห้อง ${ticketData['room_number']}",
+        recordId: ticketId.toString()
+      );
+
+      // 2. แจ้งนักศึกษาที่เป็นคนแจ้งซ่อม
+      if (reporterId != null) {
+        await NotificationService().sendFCMNotification(
+          targetUserId: reporterId,
+          title: "📝 อัปเดตสถานะงานซ่อม",
+          body: "ผู้จัดการหอพักได้รับเรื่องและมอบหมายงานให้ช่างวิชาชีพแล้ว",
+          recordId: ticketId.toString()
+        );
+      }
+      
+    } catch (e) { debugPrint("Assign Error: $e"); }
   }
 
   Future<void> _rejectTicket(dynamic ticketId) async {
@@ -578,6 +644,19 @@ class _ManagerScreenState extends State<ManagerScreen> with TickerProviderStateM
         _showNotification(tr('reject_success'), isError: false);
         debugPrint('✅ Ticket rejected successfully: $ticketId');
       }
+
+      // --- FCM Notification API Call ---
+      final ticketData = await supabase.from('tickets').select('user_id').eq('id', ticketId).single();
+      final reporterId = ticketData['user_id'];
+      if (reporterId != null) {
+        await NotificationService().sendFCMNotification(
+          targetUserId: reporterId,
+          title: "❌ รายงานของคุณถูกยกเลิก",
+          body: "ผู้จัดการได้ตรวจสอบและยกเลิกคำร้องของคุณ กรุณาติดต่อสำนักงาน",
+          recordId: ticketId.toString()
+        );
+      }
+      
     } catch (e) {
       debugPrint('❌ Reject error: $e');
       if (mounted) {

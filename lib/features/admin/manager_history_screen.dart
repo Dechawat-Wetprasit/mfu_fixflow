@@ -23,6 +23,16 @@ class _ManagerHistoryScreenState extends State<ManagerHistoryScreen> {
   List<Map<String, dynamic>> _filteredTickets = [];
   bool _isLoading = true;
   String _currentLanguageCode = 'th';
+  String? _myBuilding;
+  bool _isHeadManager = false;
+
+  final List<String> _buildings = const [
+    'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6',
+    'Sak thong 1', 'Sak thong 2',
+    'Prasert',
+    'Polgenpao',
+  ];
 
   // --- 1. คำแปล UI ---
   final Map<String, Map<String, String>> _translations = {
@@ -78,11 +88,39 @@ class _ManagerHistoryScreenState extends State<ManagerHistoryScreen> {
     return _categoryEnMap[dbValue] ?? dbValue;
   }
 
+  String? _normalizeBuilding(dynamic rawValue) {
+    if (rawValue == null) return null;
+    final value = rawValue.toString().trim();
+    if (value.isEmpty) return null;
+    if (value.toLowerCase() == 'all') return null;
+
+    for (final building in _buildings) {
+      if (building.toLowerCase() == value.toLowerCase()) {
+        return building;
+      }
+    }
+
+    return value;
+  }
+
   @override
   void initState() {
     super.initState();
     _loadLanguage();
-    _loadHistoryData();
+    _loadManagerScopeAndHistory();
+  }
+
+  Future<void> _loadManagerScopeAndHistory() async {
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      try {
+        final profile = await supabase.from('profiles').select('role,responsible_building').eq('id', user.id).single();
+        final role = (profile['role'] ?? '').toString();
+        _isHeadManager = role == 'head_manager' || role == 'admin' || role == 'it_admin';
+        _myBuilding = _normalizeBuilding(profile['responsible_building']);
+      } catch (_) {}
+    }
+    await _loadHistoryData();
   }
 
   Future<void> _loadLanguage() async {
@@ -103,11 +141,16 @@ class _ManagerHistoryScreenState extends State<ManagerHistoryScreen> {
   Future<void> _loadHistoryData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await supabase
+      dynamic query = supabase
           .from('tickets')
           .select()
-          .or('status.eq.completed,status.eq.rejected')
-          .order('created_at', ascending: false);
+          .or('status.eq.completed,status.eq.rejected');
+
+      if (!_isHeadManager && _myBuilding != null && _myBuilding!.isNotEmpty) {
+        query = query.eq('dorm_building', _myBuilding!);
+      }
+
+      final data = await query.order('created_at', ascending: false);
 
       if (mounted) {
         setState(() {

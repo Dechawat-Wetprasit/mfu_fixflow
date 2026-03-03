@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 import 'package:mfu_fixflow/features/admin/technician_history_screen.dart';
 import 'package:mfu_fixflow/features/admin/materials_tracking_screen.dart';
+import 'package:mfu_fixflow/services/notification_service.dart';
 
 class TechnicianScreen extends StatefulWidget {
   const TechnicianScreen({super.key});
@@ -399,7 +400,27 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
         });
       }
       
-      _showNotification(tr('update_success')); 
+      _showNotification(tr('update_success'));
+
+      // --- FCM Notification API Call ---
+      if (studentId != null) {
+        if (newStatus == 'in_progress') {
+          await NotificationService().sendFCMNotification(
+            targetUserId: studentId,
+            title: "👨‍🔧 ช่างกำลังดำเนินการ",
+            body: "ช่างวิชาชีพกำลังเข้าตรวจสอบและแก้ไขปัญหาให้คุณ",
+            recordId: ticketId.toString()
+          );
+        } else if (newStatus == 'completed') {
+          await NotificationService().sendFCMNotification(
+            targetUserId: studentId,
+            title: "✅ งานซ่อมของคุณเสร็จสิ้นแล้ว!",
+            body: "ช่างได้ดำเนินการแก้ไขปัญหาในห้องของคุณเรียบร้อยแล้ว โปรดตรวจสอบและยืนยัน",
+            recordId: ticketId.toString()
+          );
+        }
+      }
+
       return true;
     } catch (e) {
       debugPrint("Error: $e");
@@ -1001,10 +1022,12 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
   Future<void> _handlePhotoUpload(dynamic ticketId, {bool isBefore = false}) async {
     final xfile = await _picker.pickImage(source: ImageSource.camera, imageQuality: 50);
     if (xfile == null) return;
+    final bytes = await xfile.readAsBytes();
+    if (bytes.isEmpty) return;
     if(mounted) _showNotification(tr('uploading'), isError: false);
     final fileName = 'job_${ticketId}_${isBefore ? "before" : "after"}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     try {
-      await supabase.storage.from('job_evidence').upload(fileName, File(xfile.path));
+      await supabase.storage.from('job_evidence').uploadBinary(fileName, bytes);
       final url = supabase.storage.from('job_evidence').getPublicUrl(fileName);
       if (isBefore) await _updateStatus(ticketId, 'in_progress', null, beforeImageUrl: url);
     } catch(e) { debugPrint("Error: $e"); }
@@ -1114,10 +1137,10 @@ class _TechnicianScreenState extends State<TechnicianScreen> {
   }
 
   void _showCompleteDialog(Map<String, dynamic> ticket) {
-    File? image;
+    Uint8List? imageBytes;
     TextEditingController noteCtrl = TextEditingController();
     bool uploading = false;
-    showDialog(context: context, barrierDismissible: false, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), contentPadding: const EdgeInsets.all(24), title: Text(tr('btn_finish'), style: const TextStyle(fontWeight: FontWeight.bold)), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [GestureDetector(onTap: () async { final xfile = await _picker.pickImage(source: ImageSource.camera, imageQuality: 50); if (xfile != null) setDialogState(() => image = File(xfile.path)); }, child: Container(height: 160, width: double.infinity, decoration: BoxDecoration(color: _bgColor, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey[300]!)), child: image == null ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.camera_alt, size: 40, color: Colors.grey[400]), Text(tr('tap_to_take_photo'), style: const TextStyle(color: Colors.grey))]) : ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.file(image!, fit: BoxFit.cover)))), const SizedBox(height: 16), TextField(controller: noteCtrl, decoration: InputDecoration(labelText: tr('repair_note_label'), hintText: tr('repair_note_hint'), border: const OutlineInputBorder(), filled: true, fillColor: Colors.white), maxLines: 2), if (uploading) ...[const SizedBox(height: 16), LinearProgressIndicator(color: _gradEnd), const SizedBox(height: 8), Text(tr('uploading'))]])), actions: [if(!uploading) TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('cancel'), style: const TextStyle(color: Colors.grey))), ElevatedButton(onPressed: uploading ? null : () async { if (image == null) { _showNotification(tr('photo_required'), isError: true); return; } setDialogState(() => uploading = true); final fileName = 'job_${DateTime.now().millisecondsSinceEpoch}.jpg'; await supabase.storage.from('job_evidence').upload(fileName, image!); final url = supabase.storage.from('job_evidence').getPublicUrl(fileName); if (mounted) Navigator.pop(context); await _updateStatus(ticket['id'], 'completed', ticket['user_id'], imageUrl: url, repairNote: noteCtrl.text); }, style: ElevatedButton.styleFrom(backgroundColor: _gradEnd, foregroundColor: Colors.white), child: Text(tr('confirm')))])));
+    showDialog(context: context, barrierDismissible: false, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), contentPadding: const EdgeInsets.all(24), title: Text(tr('btn_finish'), style: const TextStyle(fontWeight: FontWeight.bold)), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [GestureDetector(onTap: () async { final xfile = await _picker.pickImage(source: ImageSource.camera, imageQuality: 50); if (xfile != null) { final bytes = await xfile.readAsBytes(); setDialogState(() { imageBytes = bytes; }); } }, child: Container(height: 160, width: double.infinity, decoration: BoxDecoration(color: _bgColor, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey[300]!)), child: imageBytes == null ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.camera_alt, size: 40, color: Colors.grey[400]), Text(tr('tap_to_take_photo'), style: const TextStyle(color: Colors.grey))]) : ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.memory(imageBytes!, fit: BoxFit.cover)))), const SizedBox(height: 16), TextField(controller: noteCtrl, decoration: InputDecoration(labelText: tr('repair_note_label'), hintText: tr('repair_note_hint'), border: const OutlineInputBorder(), filled: true, fillColor: Colors.white), maxLines: 2), if (uploading) ...[const SizedBox(height: 16), LinearProgressIndicator(color: _gradEnd), const SizedBox(height: 8), Text(tr('uploading'))]])), actions: [if(!uploading) TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('cancel'), style: const TextStyle(color: Colors.grey))), ElevatedButton(onPressed: uploading ? null : () async { if (imageBytes == null) { _showNotification(tr('photo_required'), isError: true); return; } setDialogState(() => uploading = true); final fileName = 'job_${DateTime.now().millisecondsSinceEpoch}.jpg'; await supabase.storage.from('job_evidence').uploadBinary(fileName, imageBytes!); final url = supabase.storage.from('job_evidence').getPublicUrl(fileName); if (mounted) Navigator.pop(context); await _updateStatus(ticket['id'], 'completed', ticket['user_id'], imageUrl: url, repairNote: noteCtrl.text); }, style: ElevatedButton.styleFrom(backgroundColor: _gradEnd, foregroundColor: Colors.white), child: Text(tr('confirm')))])));
   }
 
   Widget _buildDetailRow(IconData icon, String label, String? value) {

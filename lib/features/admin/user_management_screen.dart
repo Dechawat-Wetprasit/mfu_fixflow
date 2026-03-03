@@ -52,6 +52,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       'success_delete': 'ลบสำเร็จ',
       'error': 'เกิดข้อผิดพลาด',
       'manager': 'ผู้จัดการหอพัก',
+      'head_manager': 'หัวหน้าผู้จัดการหอ',
       'technician': 'ช่างเทคนิค',
       'head_technician': 'หัวหน้าช่าง',
       'select_role': 'เลือกบทบาท',
@@ -90,6 +91,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       'success_delete': 'Deleted successfully',
       'error': 'Error occurred',
       'manager': 'Manager',
+      'head_manager': 'Head Manager',
       'technician': 'Technician',
       'head_technician': 'Head Technician',
       'select_role': 'Select Role',
@@ -276,7 +278,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       final data = await supabase
           .from('profiles')
           .select()
-          .or('role.eq.admin,role.eq.it_admin,role.eq.manager,role.eq.technician,role.eq.head_technician')
+          .or('role.eq.admin,role.eq.it_admin,role.eq.head_manager,role.eq.manager,role.eq.technician,role.eq.head_technician')
           .order('created_at', ascending: false);
 
       setState(() {
@@ -307,7 +309,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final nameController = TextEditingController();
     String? selectedRole;
     String? selectedBuilding;
-    bool _obscurePassword = true;
+    bool obscurePassword = true;
 
     showDialog(
       context: context,
@@ -401,10 +403,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             prefixIcon: Icon(Icons.lock_outline, color: _gradEnd),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                obscurePassword ? Icons.visibility_off : Icons.visibility,
                                 color: Colors.grey,
                               ),
-                              onPressed: () => setDialogState(() => _obscurePassword = !_obscurePassword),
+                              onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -420,7 +422,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
-                          obscureText: _obscurePassword,
+                          obscureText: obscurePassword,
                         ),
                         const SizedBox(height: 20),
                         TextField(
@@ -463,7 +465,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
-                          value: selectedRole,
+                          initialValue: selectedRole,
                           items: [
                             DropdownMenuItem<String?>(value: 'admin', child: Row(
                               children: [
@@ -484,6 +486,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 Icon(Icons.business_center, size: 20, color: Colors.purple.shade700),
                                 const SizedBox(width: 8),
                                 Text(tr('manager')),
+                              ],
+                            )),
+                            DropdownMenuItem<String?>(value: 'head_manager', child: Row(
+                              children: [
+                                Icon(Icons.supervisor_account, size: 20, color: Colors.indigo.shade700),
+                                const SizedBox(width: 8),
+                                Text(tr('head_manager')),
                               ],
                             )),
                             DropdownMenuItem<String?>(value: 'technician', child: Row(
@@ -522,7 +531,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
-                          value: selectedBuilding,
+                          initialValue: selectedBuilding,
                           items: [
                             DropdownMenuItem<String?>(value: null, child: Row(
                               children: [
@@ -796,7 +805,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
-                          value: selectedRole,
+                          initialValue: selectedRole,
                           items: [
                             DropdownMenuItem<String?>(value: 'admin', child: Row(
                               children: [
@@ -817,6 +826,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 Icon(Icons.business_center, size: 20, color: Colors.purple.shade700),
                                 const SizedBox(width: 8),
                                 Text(tr('manager')),
+                              ],
+                            )),
+                            DropdownMenuItem<String?>(value: 'head_manager', child: Row(
+                              children: [
+                                Icon(Icons.supervisor_account, size: 20, color: Colors.indigo.shade700),
+                                const SizedBox(width: 8),
+                                Text(tr('head_manager')),
                               ],
                             )),
                             DropdownMenuItem<String?>(value: 'technician', child: Row(
@@ -855,7 +871,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
-                          value: selectedBuilding,
+                          initialValue: selectedBuilding,
                           items: [
                             DropdownMenuItem<String?>(value: null, child: Row(
                               children: [
@@ -1186,6 +1202,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return 'IT Admin';
       case 'manager':
         return tr('manager');
+      case 'head_manager':
+        return tr('head_manager');
       case 'technician':
         return tr('technician');
       case 'head_technician':
@@ -1846,6 +1864,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return {'light': Colors.blue.shade400, 'dark': Colors.blue.shade700};
       case 'manager':
         return {'light': Colors.purple.shade400, 'dark': Colors.purple.shade700};
+      case 'head_manager':
+        return {'light': Colors.indigo.shade400, 'dark': Colors.indigo.shade700};
       case 'head_technician':
         return {'light': Colors.green.shade400, 'dark': Colors.green.shade700};
       case 'technician':
@@ -1863,6 +1883,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return Icons.computer_rounded;
       case 'manager':
         return Icons.business_center_rounded;
+      case 'head_manager':
+        return Icons.supervisor_account_rounded;
       case 'head_technician':
         return Icons.engineering_rounded;
       case 'technician':

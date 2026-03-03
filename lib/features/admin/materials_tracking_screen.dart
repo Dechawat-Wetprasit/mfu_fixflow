@@ -240,9 +240,9 @@ class _MaterialsTrackingScreenState extends State<MaterialsTrackingScreen> {
         title: Text(tr('title'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: const Color(0xFF00796B),
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [const Color(0xFF00796B), const Color(0xFF004D40)],
+              colors: [Color(0xFF00796B), Color(0xFF004D40)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -461,7 +461,7 @@ class _MaterialsTrackingScreenState extends State<MaterialsTrackingScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.inventory_2_rounded, color: const Color(0xFF00796B), size: 22),
+                      const Icon(Icons.inventory_2_rounded, color: Color(0xFF00796B), size: 22),
                       const SizedBox(width: 10),
                       Text(
                         tr('materials_list'),

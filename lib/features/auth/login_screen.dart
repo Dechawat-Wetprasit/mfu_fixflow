@@ -130,10 +130,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   Future<void> _studentLogin() async {
     try {
-      // ใช้ redirect URL ที่แตกต่างกันสำหรับ web และ mobile
-      final redirectUrl = kIsWeb 
-          ? Uri.base.toString() // ใช้ URL ของ web ที่ deploy ไว้
-          : 'mfufixflow://login-callback'; // ใช้ deep link สำหรับ mobile
+      final redirectUrl = kIsWeb
+          ? Uri.base.origin
+          : 'mfufixflow://login-callback';
       
       await supabase.auth.signInWithOAuth(
         OAuthProvider.google,

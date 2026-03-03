@@ -16,9 +16,13 @@ class TicketDetailScreen extends StatefulWidget {
   State<TicketDetailScreen> createState() => _TicketDetailScreenState();
 }
 
-class _TicketDetailScreenState extends State<TicketDetailScreen> {
+class _TicketDetailScreenState extends State<TicketDetailScreen>
+    with SingleTickerProviderStateMixin {
   final supabase = Supabase.instance.client;
   late Map<String, dynamic> _ticket;
+
+  OverlayEntry? _topBannerEntry;
+  AnimationController? _topBannerController;
 
   // FEATURE: เพิ่มคำแปลสถานะ Rejected และ Step การปฏิเสธงาน
   final Map<String, Map<String, String>> _translations = const {
@@ -130,6 +134,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     _ticket = Map<String, dynamic>.from(widget.ticket);
   }
 
+  @override
+  void dispose() {
+    _topBannerController?.dispose();
+    _topBannerEntry?.remove();
+    super.dispose();
+  }
+
   String tr(String key) => _translations[widget.languageCode]?[key] ?? key;
 
   String _getDisplayCategory(String? rawCategory) {
@@ -216,7 +227,16 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     final rawCategory = _ticket['category'] as String? ?? 'ทั่วไป';
     final category = _getDisplayCategory(rawCategory);
     final description = _ticket['description'] as String? ?? '-';
-    final roomNumber = _ticket['room_number'] as String? ?? tr('unspecified');
+    final dormBuilding = _ticket['dorm_building'] as String? ?? '';
+    final roomNumberObj = _ticket['room_number'] as String? ?? '';
+
+    String displayRoom = tr('unspecified');
+    if (dormBuilding.isNotEmpty && roomNumberObj.isNotEmpty) {
+      displayRoom = '$dormBuilding-$roomNumberObj';
+    } else if (roomNumberObj.isNotEmpty) {
+      displayRoom = roomNumberObj;
+    }
+
     final createdAt = _ticket['created_at'] as String?;
     final id = _ticket['id'];
 
@@ -310,7 +330,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   _buildDetailRow(
                     Icons.room_outlined,
                     tr('location'),
-                    "${tr('room')} $roomNumber",
+                    displayRoom,
                   ),
                   const Divider(height: 1),
                   _buildDetailRow(
@@ -710,14 +730,107 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showTopBanner('Error: $e', isError: true);
       }
     }
+  }
+
+  void _showTopBanner(String message, {bool isError = false}) {
+    _topBannerController?.stop();
+    _topBannerController?.dispose();
+    _topBannerEntry?.remove();
+
+    final overlay = Overlay.of(context);
+
+    final accentColor =
+        isError ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32);
+    final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
+
+    _topBannerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+      reverseDuration: const Duration(milliseconds: 180),
+    );
+
+    final animation = CurvedAnimation(
+      parent: _topBannerController!,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    _topBannerEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SafeArea(
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, -1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: accentColor, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(_topBannerEntry!);
+    _topBannerController!.forward();
+
+    Future.delayed(const Duration(seconds: 2), () async {
+      if (!mounted || _topBannerController == null) return;
+      await _topBannerController!.reverse();
+      _topBannerEntry?.remove();
+      _topBannerEntry = null;
+    });
   }
 
   void _showSuccessDialog() {
@@ -754,9 +867,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               const SizedBox(height: 20),
               
               // Success Message
-              Text(
+              const Text(
                 'ยกเลิกสำเร็จ',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -867,9 +980,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 child: ElevatedButton(
                   onPressed: () async {
                     if (rating == 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(tr('rating_required'))),
-                      );
+                      _showTopBanner(tr('rating_required'), isError: true);
                       return;
                     }
                     await supabase.from('tickets').update({
@@ -885,9 +996,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       _ticket['rated_at'] = DateTime.now().toIso8601String();
                     });
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(tr('rating_thanks'))),
-                    );
+                    _showTopBanner(tr('rating_thanks'));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber,

@@ -17,6 +17,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final supabase = Supabase.instance.client;
   String _displayName = "Loading...";
   String _roomNumber = "";
+  String _savedDorm = "";
+  String _savedRoom = "";
   OverlayEntry? _topBannerEntry;
   AnimationController? _topBannerController;
 
@@ -85,7 +87,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'coming_soon_msg': 'ฟีเจอร์นี้จะเปิดใช้งานเร็วๆ นี้',
 
       'ok': 'ตกลง',
-      'dorm_hint': 'หอพัก / ห้อง',
+      'dorm_hint': 'หอพัก',
+      'room_number_hint': 'ห้อง',
       'phone_hint': 'เบอร์โทรศัพท์',
       'name_hint': 'ชื่อ-นามสกุล',
       'no_logs': 'ไม่พบประวัติการซ่อมบำรุงของห้องนี้',
@@ -160,7 +163,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'contact_msg':
           'If you have issues,\nContact 053-916-xxx\nor Line: @mfu_fixflow',
       'ok': 'OK',
-      'dorm_hint': 'Dorm / Room',
+      'dorm_hint': 'Dorm',
+      'room_number_hint': 'Room',
       'phone_hint': 'Phone Number',
       'name_hint': 'Full Name',
       'no_logs': 'No maintenance logs found for this room',
@@ -290,10 +294,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   indicatorSize: TabBarIndicatorSize.tab,
                   dividerColor: Colors.transparent,
                   tabs: const [
-                    Tab(
-                      text: 'ข่าวสาร',
-                      icon: Icon(Icons.campaign_rounded),
-                    ),
+                    Tab(text: 'ข่าวสาร', icon: Icon(Icons.campaign_rounded)),
                     Tab(
                       text: 'แจ้งเตือน',
                       icon: Icon(Icons.notifications_active_rounded),
@@ -305,10 +306,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // Tab Views
               Expanded(
                 child: TabBarView(
-                  children: [
-                    _buildNewsTab(),
-                    _buildNotificationTab(userId),
-                  ],
+                  children: [_buildNewsTab(), _buildNotificationTab(userId)],
                 ),
               ),
             ],
@@ -345,10 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Icon(Icons.inbox, size: 50, color: Colors.grey[300]),
                 const SizedBox(height: 10),
-                Text(
-                  'ไม่มีประกาศ',
-                  style: TextStyle(color: Colors.grey[500]),
-                ),
+                Text('ไม่มีประกาศ', style: TextStyle(color: Colors.grey[500])),
               ],
             ),
           );
@@ -417,18 +412,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 .order('created_at', ascending: false),
             builder: (context, snapshot) {
               // Debug: Display connection status
-              debugPrint('[Notification] Stream State: ${snapshot.connectionState}');
+              debugPrint(
+                '[Notification] Stream State: ${snapshot.connectionState}',
+              );
               debugPrint('[Notification] User ID: $userId');
               debugPrint('[Notification] Has Data: ${snapshot.hasData}');
-              debugPrint('[Notification] Data Count: ${snapshot.data?.length ?? 0}');
-              
+              debugPrint(
+                '[Notification] Data Count: ${snapshot.data?.length ?? 0}',
+              );
+
               if (snapshot.hasError) {
                 debugPrint('[Error] Notification Error: ${snapshot.error}');
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 50, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 50,
+                        color: Colors.red,
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         'เกิดข้อผิดพลาด: ${snapshot.error}',
@@ -454,7 +457,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               }
 
               final notifications = snapshot.data ?? [];
-              debugPrint('[Notifications] Total: ${notifications.length} items');
+              debugPrint(
+                '[Notifications] Total: ${notifications.length} items',
+              );
 
               if (notifications.isEmpty) {
                 return Center(
@@ -503,11 +508,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           _markAsRead(noti['id']);
                         }
                       },
-                      tileColor: isRead ? Colors.transparent : const Color(0xFFFFF3F3),
+                      tileColor: isRead
+                          ? Colors.transparent
+                          : const Color(0xFFFFF3F3),
                       leading: CircleAvatar(
-                        backgroundColor: isRead ? Colors.green.shade50 : Colors.orange.shade50,
+                        backgroundColor: isRead
+                            ? Colors.green.shade50
+                            : Colors.orange.shade50,
                         child: Icon(
-                          isRead ? Icons.check_circle_outline : Icons.new_releases_outlined,
+                          isRead
+                              ? Icons.check_circle_outline
+                              : Icons.new_releases_outlined,
                           color: isRead ? Colors.green : Colors.orange,
                           size: 24,
                         ),
@@ -518,7 +529,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: Text(
                               noti['title'] ?? 'แจ้งเตือน',
                               style: TextStyle(
-                                fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                                fontWeight: isRead
+                                    ? FontWeight.normal
+                                    : FontWeight.bold,
                                 fontSize: 15,
                               ),
                               maxLines: 1,
@@ -595,10 +608,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _deleteNotification(int notificationId) async {
     try {
-      await supabase
-          .from('notifications')
-          .delete()
-          .eq('id', notificationId);
+      await supabase.from('notifications').delete().eq('id', notificationId);
     } catch (e) {
       debugPrint('Error deleting notification: $e');
     }
@@ -632,23 +642,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ไม่ต้องใช้ _loadData() แล้ว เพราะใช้ StreamBuilder แทน
 
-  // Format room number for display with space between dorm and room (e.g. "F 302")
+  // Format room number for display using saved dorm and room (e.g. "L2-218")
   String _getDisplayRoomNumber() {
-    if (_roomNumber.isEmpty) return _roomNumber;
-    
-    // Find the first digit position
-    int digitStart = 0;
-    while (digitStart < _roomNumber.length && !_roomNumber[digitStart].contains(RegExp(r'[0-9]'))) {
-      digitStart++;
-    }
-    
-    // If no digits found, return as is
-    if (digitStart == 0 || digitStart == _roomNumber.length) {
-      return _roomNumber;
-    }
-    
-    // Split dorm and room number with space
-    return "${_roomNumber.substring(0, digitStart)} ${_roomNumber.substring(digitStart)}";
+    if (_savedDorm.isEmpty || _savedRoom.isEmpty) return _roomNumber;
+    return "$_savedDorm-$_savedRoom";
   }
 
   Future<void> _loadUserProfile() async {
@@ -672,7 +669,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     // Combine dorm + room number (e.g. "F302")
     String finalRoomNumber = "";
-    if (savedDorm != null && savedDorm.isNotEmpty && savedRoom != null && savedRoom.isNotEmpty) {
+    if (savedDorm != null &&
+        savedDorm.isNotEmpty &&
+        savedRoom != null &&
+        savedRoom.isNotEmpty) {
       finalRoomNumber = "$savedDorm$savedRoom";
     } else if (savedDorm != null && savedDorm.isNotEmpty) {
       finalRoomNumber = savedDorm;
@@ -682,6 +682,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         _displayName = fullName!.split(' ')[0];
         _roomNumber = finalRoomNumber;
+        _savedDorm = savedDorm ?? "";
+        _savedRoom = savedRoom ?? "";
       });
     }
   }
@@ -716,7 +718,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFA51C30), Color(0xFF7C1523)],
@@ -733,10 +738,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                      ),
+                      child: const Icon(Icons.logout, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -825,7 +827,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c),
-            child: Text(tr('cancel'), style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              tr('cancel'),
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -919,10 +924,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           builder: (context, newsSnapshot) {
             // Filter announcements for students only
             final allNews = newsSnapshot.data ?? [];
-            final announcements = allNews.where((news) {
-              final target = news['target_group'];
-              return target == 'all' || target == 'student';
-            }).take(5).toList();
+            final announcements = allNews
+                .where((news) {
+                  final target = news['target_group'];
+                  return target == 'all' || target == 'student';
+                })
+                .take(5)
+                .toList();
 
             return StreamBuilder<List<Map<String, dynamic>>>(
               stream: supabase
@@ -931,7 +939,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   .eq('user_id', userId),
               builder: (context, notiSnapshot) {
                 final allNotifications = notiSnapshot.data ?? [];
-                final unreadNotifications = allNotifications.where((n) => n['is_read'] == false).length;
+                final unreadNotifications = allNotifications
+                    .where((n) => n['is_read'] == false)
+                    .length;
 
                 return _buildMainScaffold(
                   myTickets,
@@ -1007,8 +1017,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -1085,8 +1093,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -1109,10 +1115,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       color: Colors.white.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: CircleAvatar(
+                    child: const CircleAvatar(
                       radius: 22,
                       backgroundColor: Colors.white,
-                      child: const Icon(
+                      child: Icon(
                         Icons.person,
                         color: Color(0xFFA51C30),
                         size: 24,
@@ -1173,35 +1179,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ),
-        const SizedBox(height: 30),
-        // Main Menu
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle(tr('main_menu')),
-                const SizedBox(height: 12),
-                _buildQuickMenuGrid(context, const []),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 25),
+        const SizedBox(height: 20),
         // News
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1224,10 +1202,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     }
 
                     final allNews = snapshot.data ?? [];
-                    final guestAnnouncements = allNews.where((news) {
-                      final target = news['target_group'];
-                      return target == 'all' || target == 'student';
-                    }).take(5).toList();
+                    final guestAnnouncements = allNews
+                        .where((news) {
+                          final target = news['target_group'];
+                          return target == 'all' || target == 'student';
+                        })
+                        .take(5)
+                        .toList();
 
                     if (guestAnnouncements.isEmpty) {
                       return Center(
@@ -1388,7 +1369,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         child: Center(
                           child: Text(
-                            unreadNotifications > 99 ? '99+' : unreadNotifications.toString(),
+                            unreadNotifications > 99
+                                ? '99+'
+                                : unreadNotifications.toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -1426,7 +1409,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -1445,7 +1431,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       _buildSectionTitle(tr('latest_jobs')),
                       IconButton(
                         onPressed: _refreshAll,
-                        icon: const Icon(Icons.refresh, color: Colors.grey, size: 22),
+                        icon: const Icon(
+                          Icons.refresh,
+                          color: Colors.grey,
+                          size: 22,
+                        ),
                         constraints: const BoxConstraints(),
                         padding: EdgeInsets.zero,
                       ),
@@ -1459,42 +1449,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         const SizedBox(height: 25),
-        // Main Menu
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: FadeTransition(
-            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(
-                parent: _animationController,
-                curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
-              ),
-            ),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle(tr('main_menu')),
-                  const SizedBox(height: 12),
-                  _buildQuickMenuGrid(context, myTickets),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 25),
         // News Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1502,7 +1456,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
               CurvedAnimation(
                 parent: _animationController,
-                curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+                curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
               ),
             ),
             child: Container(
@@ -1658,10 +1612,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return BottomAppBar(
       color: Colors.white,
       surfaceTintColor: Colors.white,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8.0,
       child: SizedBox(
-        height: 60,
+        height: 66,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -1675,10 +1627,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               },
             ),
             _AnimatedNavButton(
+              icon: Icons.build_circle_rounded,
+              label: tr('menu_repair'),
+              isSelected: _selectedIndex == 1,
+              onTap: () async {
+                setState(() => _selectedIndex = 1);
+                if (_isLoggedIn) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ReportScreen(languageCode: _currentLanguageCode),
+                    ),
+                  );
+                  await _refreshAll();
+                } else {
+                  _showLoginDialog();
+                }
+                if (mounted) setState(() => _selectedIndex = 0);
+              },
+            ),
+            _AnimatedNavButton(
+              icon: Icons.history_edu_rounded,
+              label: tr('menu_room_log'),
+              isSelected: _selectedIndex == 2,
+              onTap: () {
+                setState(() => _selectedIndex = 2);
+                if (_isLoggedIn) {
+                  _showRoomLog();
+                } else {
+                  _showLoginDialog();
+                }
+                if (mounted) setState(() => _selectedIndex = 0);
+              },
+            ),
+            _AnimatedNavButton(
               icon: Icons.grid_view_rounded,
               label: tr('nav_more'),
-              isSelected: _selectedIndex == 1,
-              onTap: () => _showMoreMenu(),
+              isSelected: _selectedIndex == 3,
+              onTap: () async {
+                setState(() => _selectedIndex = 3);
+                await _showMoreMenu();
+                if (mounted) setState(() => _selectedIndex = 0);
+              },
             ),
           ],
         ),
@@ -1722,7 +1713,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(12),
@@ -1884,10 +1878,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 height: 34,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.18),
-                      color.withOpacity(0.08),
-                    ],
+                    colors: [color.withOpacity(0.18), color.withOpacity(0.08)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -2012,7 +2003,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(ticket['status']).withOpacity(0.15),
+                          color: _getStatusColor(
+                            ticket['status'],
+                          ).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
@@ -2029,13 +2022,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              _getStatusColor(ticket['status']).withOpacity(0.15),
-                              _getStatusColor(ticket['status']).withOpacity(0.1),
+                              _getStatusColor(
+                                ticket['status'],
+                              ).withOpacity(0.15),
+                              _getStatusColor(
+                                ticket['status'],
+                              ).withOpacity(0.1),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: _getStatusColor(ticket['status']).withOpacity(0.2),
+                            color: _getStatusColor(
+                              ticket['status'],
+                            ).withOpacity(0.2),
                             width: 1,
                           ),
                         ),
@@ -2097,7 +2096,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 5),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
                       borderRadius: BorderRadius.circular(10),
@@ -2195,7 +2197,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return null;
   }
 
-  Map<String, dynamic>? _findLatestCompletedTicket(List<Map<String, dynamic>> tickets) {
+  Map<String, dynamic>? _findLatestCompletedTicket(
+    List<Map<String, dynamic>> tickets,
+  ) {
     for (final ticket in tickets) {
       final status = ticket['status'] as String?;
       final techName = ticket['technician_name'] as String?;
@@ -2285,10 +2289,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: const Color(0xFFA51C30).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.engineering,
-                  color: Color(0xFFA51C30),
-                ),
+                child: const Icon(Icons.engineering, color: Color(0xFFA51C30)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -2302,13 +2303,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 4),
                     Text(
                       techName,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _getStatusColor(status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -2419,7 +2426,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Text(
                 tr('rating_title'),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -2455,11 +2465,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       _showTopBanner(tr('rating_required'), isError: true);
                       return;
                     }
-                    await supabase.from('tickets').update({
-                      'rating': rating,
-                      'rating_comment': commentController.text.trim(),
-                      'rated_at': DateTime.now().toIso8601String(),
-                    }).eq('id', ticket['id']);
+                    await supabase
+                        .from('tickets')
+                        .update({
+                          'rating': rating,
+                          'rating_comment': commentController.text.trim(),
+                          'rated_at': DateTime.now().toIso8601String(),
+                        })
+                        .eq('id', ticket['id']);
 
                     if (mounted) {
                       Navigator.pop(context);
@@ -2520,28 +2533,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
                 stream: supabase
-                    .from('room_logs')
+                    .from('tickets')
                     .stream(primaryKey: ['id'])
-                    .eq('room_number', _roomNumber)
-                    .order('log_date', ascending: false),
+                    .eq('dorm_building', _savedDorm)
+                    .order('created_at', ascending: false),
                 builder: (context, snapshot) {
-                  debugPrint('[RoomLogs] Stream State: ${snapshot.connectionState}');
-                  debugPrint('[RoomLogs] Room Number: $_roomNumber');
+                  debugPrint(
+                    '[RoomLogs] Stream State: ${snapshot.connectionState}',
+                  );
+                  debugPrint('[RoomLogs] Dorm: $_savedDorm, Room: $_savedRoom');
                   debugPrint('[RoomLogs] Has Data: ${snapshot.hasData}');
-                  debugPrint('[RoomLogs] Data Count: ${snapshot.data?.length ?? 0}');
-                  
+                  debugPrint(
+                    '[RoomLogs] Data Count: ${snapshot.data?.length ?? 0}',
+                  );
+
                   if (snapshot.hasError) {
                     debugPrint('[Error] RoomLogs Error: ${snapshot.error}');
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline, size: 50, color: Colors.red[300]),
+                          Icon(
+                            Icons.error_outline,
+                            size: 50,
+                            color: Colors.red[300],
+                          ),
                           const SizedBox(height: 10),
                           Text(
                             'Error: ${snapshot.error}',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.red[500], fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.red[500],
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -2552,7 +2576,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final logs = snapshot.data ?? [];
+                  final allLogs = snapshot.data ?? [];
+                  final logs = allLogs.where((log) => log['room_number'] == _savedRoom).toList();
+                  
                   if (logs.isEmpty) {
                     return Center(
                       child: Column(
@@ -2571,17 +2597,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           const SizedBox(height: 5),
                           Text(
                             'Room: ${_getDisplayRoomNumber()}',
-                            style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                     );
                   }
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     itemCount: logs.length,
                     itemBuilder: (context, index) {
                       final log = logs[index];
+                      final status = log['status'] as String? ?? 'pending';
+                      final category = _getDisplayCategory(log['category']);
+                      
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
@@ -2595,37 +2630,60 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.brown.withOpacity(0.1),
+                              color: _getStatusColor(status).withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.build, color: Colors.brown, size: 20),
+                            child: Icon(
+                              Icons.build,
+                              color: _getStatusColor(status),
+                              size: 20,
+                            ),
                           ),
                           title: Text(
-                            log['title'] ?? '-',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            category,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
                               Text(
-                                '${log['log_date'] ?? '-'} • ${log['performed_by'] ?? '-'}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                log['description'] ?? '-',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatDateString(log['created_at']),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
                               ),
                             ],
                           ),
                           trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: _getStatusColor(status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              log['status'] ?? '-',
-                              style: const TextStyle(
+                              _getStatusText(status),
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
-                                color: Colors.green,
+                                color: _getStatusColor(status),
                               ),
                             ),
                           ),
@@ -2743,7 +2801,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Expanded(
                         child: Text(
                           item,
-                          style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[800],
+                          ),
                         ),
                       ),
                     ],
@@ -2791,60 +2852,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
-              buildRuleSection(
-                'การเข้า-ออกหอพัก',
-                [
-                  'หอพักเปิด 06.00 น. และปิด 22.30 น.',
-                  'กลับหลังเวลา 22.30 น. ให้ทำแบบฟอร์มขอกลับหอพักล่าช้าและแจ้งผู้ดูแลล่วงหน้า',
-                  'พกบัตรประจำตัวหอพักและแสดงต่อเจ้าหน้าที่ทุกครั้ง',
-                  'หากค้างคืนนอกหอพัก ต้องแจ้งขออนุญาตและระบุวัน/เวลาให้ชัดเจน',
-                ],
-              ),
-              buildRuleSection(
-                'การเยี่ยมผู้พักอาศัย',
-                [
-                  'พบผู้พักอาศัยได้เฉพาะพื้นที่ที่มหาวิทยาลัยกำหนด',
-                  'บุคคลภายนอกห้ามเข้าพื้นที่พักอาศัย เว้นแต่ได้รับอนุญาตเป็นกรณีไป',
-                ],
-              ),
-              buildRuleSection(
-                'การอยู่ร่วมกัน',
-                [
-                  'ห้ามรบกวนผู้อื่นและก่อความเดือดร้อน',
-                  'ห้ามเล่นการพนัน',
-                  'ห้ามดื่มแอลกอฮอล์หรือใช้สารเสพติดทุกชนิด',
-                  'ห้ามมีอาวุธ วัตถุไวไฟ หรือวัตถุอันตราย',
-                  'ห้ามเลี้ยงสัตว์ในหอพักหรือห้องพัก',
-                  'ห้ามทำลายทรัพย์สินหรือสิ่งของส่วนรวม',
-                  'ห้ามจัดกิจกรรม/การละเล่นที่ไม่ได้รับอนุญาต',
-                  'ห้ามสวมรองเท้าในพื้นที่ที่พักอาศัย',
-                ],
-              ),
-              buildRuleSection(
-                'อุปกรณ์และเครื่องใช้ไฟฟ้า',
-                [
-                  'ใช้เครื่องใช้ไฟฟ้าได้เฉพาะที่อนุญาต (เช่น พัดลม วิทยุ ไดร์เป่าผม คอมพิวเตอร์)',
-                  'ห้ามใช้เครื่องใช้ไฟฟ้าต้องห้าม เช่น เตาไฟฟ้า กาต้มน้ำไฟฟ้า ไมโครเวฟ ตู้เย็น',
-                  'ห้ามทำอาหารภายในห้องพัก',
-                  'ห้ามนำอุปกรณ์ของส่วนกลางมาใช้ส่วนตัวหรือดัดแปลง',
-                ],
-              ),
-              buildRuleSection(
-                'การฝ่าฝืนระเบียบ',
-                [
-                  'ผู้ฝ่าฝืนจะถูกลงโทษตามระเบียบและข้อบังคับของมหาวิทยาลัย',
-                  'มหาวิทยาลัยมีสิทธิ์เข้าตรวจสอบ/ซ่อมแซมห้องพักเมื่อจำเป็น',
-                  'อาจมีการตรวจระเบียบและสุขอนามัยโดยไม่ต้องแจ้งล่วงหน้า',
-                ],
-              ),
-              buildRuleSection(
-                'เมื่อสิ้นปีการศึกษา',
-                [
-                  'ผู้พักอาศัยต้องย้ายออกตามวันเวลาที่มหาวิทยาลัยกำหนด',
-                  'ห้ามค้างพักหลังวันสิ้นปีการศึกษา',
-                  'ต้องเคลื่อนย้ายทรัพย์สินออกจากหอพักให้เสร็จภายในกำหนด',
-                ],
-              ),
+              buildRuleSection('การเข้า-ออกหอพัก', [
+                'หอพักเปิด 06.00 น. และปิด 22.30 น.',
+                'กลับหลังเวลา 22.30 น. ให้ทำแบบฟอร์มขอกลับหอพักล่าช้าและแจ้งผู้ดูแลล่วงหน้า',
+                'พกบัตรประจำตัวหอพักและแสดงต่อเจ้าหน้าที่ทุกครั้ง',
+                'หากค้างคืนนอกหอพัก ต้องแจ้งขออนุญาตและระบุวัน/เวลาให้ชัดเจน',
+              ]),
+              buildRuleSection('การเยี่ยมผู้พักอาศัย', [
+                'พบผู้พักอาศัยได้เฉพาะพื้นที่ที่มหาวิทยาลัยกำหนด',
+                'บุคคลภายนอกห้ามเข้าพื้นที่พักอาศัย เว้นแต่ได้รับอนุญาตเป็นกรณีไป',
+              ]),
+              buildRuleSection('การอยู่ร่วมกัน', [
+                'ห้ามรบกวนผู้อื่นและก่อความเดือดร้อน',
+                'ห้ามเล่นการพนัน',
+                'ห้ามดื่มแอลกอฮอล์หรือใช้สารเสพติดทุกชนิด',
+                'ห้ามมีอาวุธ วัตถุไวไฟ หรือวัตถุอันตราย',
+                'ห้ามเลี้ยงสัตว์ในหอพักหรือห้องพัก',
+                'ห้ามทำลายทรัพย์สินหรือสิ่งของส่วนรวม',
+                'ห้ามจัดกิจกรรม/การละเล่นที่ไม่ได้รับอนุญาต',
+                'ห้ามสวมรองเท้าในพื้นที่ที่พักอาศัย',
+              ]),
+              buildRuleSection('อุปกรณ์และเครื่องใช้ไฟฟ้า', [
+                'ใช้เครื่องใช้ไฟฟ้าได้เฉพาะที่อนุญาต (เช่น พัดลม วิทยุ ไดร์เป่าผม คอมพิวเตอร์)',
+                'ห้ามใช้เครื่องใช้ไฟฟ้าต้องห้าม เช่น เตาไฟฟ้า กาต้มน้ำไฟฟ้า ไมโครเวฟ ตู้เย็น',
+                'ห้ามทำอาหารภายในห้องพัก',
+                'ห้ามนำอุปกรณ์ของส่วนกลางมาใช้ส่วนตัวหรือดัดแปลง',
+              ]),
+              buildRuleSection('การฝ่าฝืนระเบียบ', [
+                'ผู้ฝ่าฝืนจะถูกลงโทษตามระเบียบและข้อบังคับของมหาวิทยาลัย',
+                'มหาวิทยาลัยมีสิทธิ์เข้าตรวจสอบ/ซ่อมแซมห้องพักเมื่อจำเป็น',
+                'อาจมีการตรวจระเบียบและสุขอนามัยโดยไม่ต้องแจ้งล่วงหน้า',
+              ]),
+              buildRuleSection('เมื่อสิ้นปีการศึกษา', [
+                'ผู้พักอาศัยต้องย้ายออกตามวันเวลาที่มหาวิทยาลัยกำหนด',
+                'ห้ามค้างพักหลังวันสิ้นปีการศึกษา',
+                'ต้องเคลื่อนย้ายทรัพย์สินออกจากหอพักให้เสร็จภายในกำหนด',
+              ]),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
@@ -2876,6 +2919,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     final dormController = TextEditingController(
       text: prefs.getString('saved_dorm') ?? '',
+    );
+    final roomController = TextEditingController(
+      text: prefs.getString('saved_room') ?? '',
     );
     final nameController = TextEditingController(text: initialName);
     if (!mounted) return;
@@ -2982,10 +3028,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
-                _buildProfileField(
-                  controller: dormController,
-                  label: tr('dorm_hint'),
-                  icon: Icons.home_outlined,
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: _buildProfileField(
+                        controller: dormController,
+                        label: tr('dorm_hint'),
+                        icon: Icons.home_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: _buildProfileField(
+                        controller: roomController,
+                        label: tr('room_number_hint'),
+                        icon: Icons.meeting_room_outlined,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -3008,9 +3070,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          await prefs.setString('saved_name', nameController.text);
-                          await prefs.setString('saved_phone', phoneController.text);
-                          await prefs.setString('saved_dorm', dormController.text);
+                          await prefs.setString(
+                            'saved_name',
+                            nameController.text,
+                          );
+                          await prefs.setString(
+                            'saved_phone',
+                            phoneController.text,
+                          );
+                          await prefs.setString(
+                            'saved_dorm',
+                            dormController.text,
+                          );
+                          await prefs.setString(
+                            'saved_room',
+                            roomController.text,
+                          );
                           if (mounted) {
                             Navigator.pop(c);
                             _showTopBanner(tr('save_success'));
@@ -3066,7 +3141,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFA51C30), Color(0xFF7C1523)],
@@ -3143,6 +3221,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         const SizedBox(height: 10),
                         _buildMoreMenuTile(
+                          icon: Icons.engineering,
+                          title: tr('my_technician'),
+                          subtitle: tr('view_detail'),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            if (!_isLoggedIn) {
+                              _showLoginDialog();
+                              return;
+                            }
+                            final userId = supabase.auth.currentUser?.id;
+                            if (userId == null) {
+                              _showLoginDialog();
+                              return;
+                            }
+                            final tickets = await supabase
+                                .from('tickets')
+                                .select()
+                                .eq('user_id', userId)
+                                .order('created_at', ascending: false);
+                            if (!mounted) return;
+                            _showMyTechnicianSheet(
+                              List<Map<String, dynamic>>.from(tickets),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _buildMoreMenuTile(
+                          icon: Icons.menu_book,
+                          title: tr('menu_rules'),
+                          subtitle: tr('view_detail'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showRulesDialog(context);
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _buildMoreMenuTile(
                           icon: Icons.support_agent_rounded,
                           title: tr('contact_staff'),
                           subtitle: tr('coming_soon_msg'),
@@ -3214,7 +3329,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
@@ -3258,7 +3376,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFA51C30), Color(0xFF7C1523)],
@@ -3337,7 +3458,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final overlay = Overlay.of(context);
 
-    final accentColor = isError ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32);
+    final accentColor = isError
+        ? const Color(0xFFD32F2F)
+        : const Color(0xFF2E7D32);
     final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
 
     _topBannerController = AnimationController(
@@ -3456,7 +3579,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFFA51C30), Color(0xFF7C1523)],
@@ -3473,10 +3599,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
-                          Icons.language,
-                          color: Colors.white,
-                        ),
+                        child: const Icon(Icons.language, color: Colors.white),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
