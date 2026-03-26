@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:mfu_fixflow/supabase_config.dart';
+
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // จำเป็นต้องมีสำหรับตอนที่แอปลดพับและมี Push notification เข้าทา
@@ -105,16 +107,13 @@ class NotificationService {
     // ใช้ http package เรียก Edge Function โดยตรงเพื่อแก้ปัญหา 401
     try {
       debugPrint('[FCM] Sending to user: $targetUserId, title: "$title"');
-      
-      const supabaseUrl = 'https://vebcqfkgzhkgcryzlrhu.supabase.co';
-      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlYmNxZmtnemhrZ2NyeXpscmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NDA1MDgsImV4cCI6MjA4NDMxNjUwOH0.Za4NWx1wAc00EmKtk6UGwnAxzRPTWzvh0k-cMJHBKNE';
 
       final res = await http.post(
         Uri.parse('$supabaseUrl/functions/v1/send-notification'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $anonKey',
-          'apikey': anonKey,
+          'Authorization': 'Bearer $supabaseAnonKey',
+          'apikey': supabaseAnonKey,
         },
         body: jsonEncode({
           'target_user_id': targetUserId,

@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mfu_fixflow/features/auth/login_screen.dart';
 import 'package:mfu_fixflow/features/auth/role_selection_screen.dart';
 import 'package:mfu_fixflow/supabase_config.dart';
@@ -11,6 +12,9 @@ import 'package:mfu_fixflow/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 0. Load environment variables from .env
+  await dotenv.load(fileName: ".env");
 
   // 1. Initialise Firebase
   try {

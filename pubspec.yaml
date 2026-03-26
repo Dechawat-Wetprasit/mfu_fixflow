@@ -22,6 +22,7 @@ dependencies:
   shared_preferences: ^2.5.4
   firebase_core: ^4.4.0
   firebase_messaging: ^16.1.1
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -34,6 +35,7 @@ flutter:
   
   assets:
     - assets/images/
+    - .env
 
 # ✅ การตั้งค่าไอคอนแอป
 flutter_launcher_icons:
