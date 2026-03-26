@@ -1,35 +1,42 @@
-<p align="center">
-  <img src="assets/images/mfu-fixflow.png" alt="MFU FixFlow" width="140"/>
-</p>
+<!-- Header Banner -->
+<div align="center">
 
-<h1 align="center">MFU FixFlow</h1>
+<img src="assets/images/mfu-fixflow.png" alt="MFU FixFlow" width="150"/>
 
-<p align="center">
-  <strong>Dormitory Maintenance Request System</strong><br/>
-  <sub>Built for Mae Fah Luang University</sub>
-</p>
+# MFU FixFlow
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Flutter-3.10+-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
-  <img src="https://img.shields.io/badge/Dart-3.10+-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart"/>
-  <img src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"/>
-  <img src="https://img.shields.io/badge/Firebase-FCM-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" alt="Firebase"/>
-  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Web-green?style=for-the-badge" alt="Platform"/>
-</p>
+### 🏢 Dormitory Maintenance Request System
 
-<p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-getting-started">Getting Started</a> •
-  <a href="#-user-roles">User Roles</a>
-</p>
+*A modern, role-based facility management platform built for Mae Fah Luang University*
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.10+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.10+-0175C2?style=flat-square&logo=dart&logoColor=white)](https://dart.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![Firebase](https://img.shields.io/badge/Firebase-FCM-FFCA28?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Web-brightgreen?style=flat-square)]()
+[![License](https://img.shields.io/badge/License-University%20Project-blue?style=flat-square)]()
+
+<br/>
+
+[Features](#-features) · [Tech Stack](#-tech-stack) · [Architecture](#-architecture) · [Getting Started](#-getting-started) · [Roles & Permissions](#-roles--permissions) · [Security](#-security)
+
+<br/>
 
 ---
 
-## 📋 Overview
+</div>
 
-**MFU FixFlow** is a cross-platform mobile & web application designed to streamline the dormitory maintenance workflow at Mae Fah Luang University. Students can submit repair requests with photo evidence, while managers and technicians can track, assign, and resolve issues — all with real-time push notifications.
+## 📋 About
+
+> **MFU FixFlow** bridges the gap between students experiencing facility issues and the maintenance teams responsible for resolving them.
+
+Traditional dormitory maintenance relies on phone calls, paper forms, or walk-in requests — leading to lost tickets, unclear priorities, and slow response times. **FixFlow** digitizes this entire workflow into a streamlined mobile & web experience.
+
+**Key outcomes:**
+- ⚡ **Faster response** — issues are routed instantly to the right team
+- 📸 **Visual evidence** — photo attachments eliminate miscommunication
+- 📊 **Full transparency** — every stakeholder can track progress in real-time
+- 🔔 **Zero missed tickets** — push notifications keep everyone in the loop
 
 ---
 
@@ -37,30 +44,46 @@
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 🎫 Ticket Management
-- Submit maintenance requests with photo attachments
-- Real-time status tracking from submission to completion
-- Categorized by building and issue type
-
-### 🔔 Smart Notifications
-- Real-time push notifications via Firebase Cloud Messaging
-- Role-based notification routing
-- Auto-cleanup of stale device tokens
+### 📝 Ticket Lifecycle
+- Create maintenance requests with **photo evidence**
+- Automatic routing based on **building assignment**
+- Real-time **status tracking** from submission → resolution
+- Full ticket history and **audit trail**
+- Delete or update tickets with proper authorization
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### 👥 Role-Based Access Control
-- Six distinct user roles with granular permissions
-- Building-specific assignment for managers and technicians
-- Secure user management portal for IT Admins
+### 🔔 Notification Engine
+- **Real-time push notifications** via Firebase Cloud Messaging (v1 API)
+- Intelligent **role-based routing** — only relevant users get notified
+- In-app **notification inbox** with read/unread tracking
+- **Auto-cleanup** of stale or unregistered device tokens
+- Background notification handling for closed app states
 
-### 📊 Dashboard & Analytics
-- Overview dashboard for managers and technicians
-- Filter and search across all tickets
-- Notification inbox with read/unread tracking
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 👥 Access Control
+- **Six distinct user roles** with granular permission levels
+- **Building-specific assignment** for managers and technicians
+- Secure IT Admin portal for **full user CRUD operations**
+- Session management with **automatic token refresh**
+- PKCE authentication flow for enhanced security
+
+</td>
+<td width="50%" valign="top">
+
+### 📊 Dashboard & Management
+- Role-tailored **overview dashboard** with real-time data streams
+- **Search and filter** across all tickets and users
+- **Multi-language support** (Thai & English) with user preference storage
+- Responsive design for both **mobile and web** platforms
+- Building-scoped views for **focused management**
 
 </td>
 </tr>
@@ -70,40 +93,92 @@
 
 ## 🛠 Tech Stack
 
-| Layer | Technology | Purpose |
-|:---:|:---:|:---|
-| **Frontend** | Flutter & Dart | Cross-platform UI (Android + Web) |
-| **Backend** | Supabase (PostgreSQL) | Database, Auth, Storage, Edge Functions |
-| **Notifications** | Firebase Cloud Messaging | Push notifications via FCM v1 API |
-| **Auth** | Supabase Auth (PKCE) | Secure authentication flow |
-| **Storage** | Supabase Storage | Photo/image uploads for tickets |
+<table>
+<tr>
+<td align="center" width="120">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/flutter/flutter-original.svg" width="48" height="48" alt="Flutter" />
+<br><strong>Flutter</strong>
+<br><sub>Frontend</sub>
+</td>
+<td align="center" width="120">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/dart/dart-original.svg" width="48" height="48" alt="Dart" />
+<br><strong>Dart</strong>
+<br><sub>Language</sub>
+</td>
+<td align="center" width="120">
+<img src="https://cf-assets.www.cloudflare.com/slt3lc6tev37/5FpAMKbNmKOY9W8If3JILF/ee09a5d0e9c6fc7e94c5d8f25c6f1e93/supabase-logo-icon_1.svg" width="48" height="48" alt="Supabase" />
+<br><strong>Supabase</strong>
+<br><sub>Backend</sub>
+</td>
+<td align="center" width="120">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg" width="48" height="48" alt="Firebase" />
+<br><strong>Firebase</strong>
+<br><sub>Notifications</sub>
+</td>
+<td align="center" width="120">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="48" height="48" alt="PostgreSQL" />
+<br><strong>PostgreSQL</strong>
+<br><sub>Database</sub>
+</td>
+</tr>
+</table>
+
+| Component | Technology | Details |
+|:---|:---|:---|
+| **UI Framework** | Flutter 3.10+ | Material Design 3, responsive layouts |
+| **State & Data** | Supabase Realtime | Live data streams for dashboards |
+| **Authentication** | Supabase Auth | PKCE flow, session management, token refresh |
+| **Push Notifications** | Firebase FCM v1 | HTTP v1 API via Supabase Edge Functions |
+| **File Storage** | Supabase Storage | Ticket photo uploads with public URL generation |
+| **Edge Functions** | Deno (TypeScript) | Server-side notification dispatch |
+| **Environment Config** | flutter_dotenv | Runtime secret loading from `.env` |
 
 ---
 
 ## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Flutter App                        │
-│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
-│  │   Auth   │  │ Dashboard │  │  Report/Tickets   │  │
-│  └────┬─────┘  └────┬─────┘  └────────┬──────────┘  │
-│       │              │                 │              │
-│  ┌────▼──────────────▼─────────────────▼──────────┐  │
-│  │            Supabase Client SDK                  │  │
-│  └────────────────────┬───────────────────────────┘  │
-└───────────────────────┼──────────────────────────────┘
-                        │
-         ┌──────────────▼──────────────┐
-         │        Supabase Cloud       │
-         │  ┌──────────────────────┐   │
-         │  │   PostgreSQL (DB)    │   │
-         │  ├──────────────────────┤   │
-         │  │   Edge Functions     │──────► Firebase FCM v1 API
-         │  ├──────────────────────┤   │
-         │  │   Auth / Storage     │   │
-         │  └──────────────────────┘   │
-         └─────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                     Client Layer                          │
+│                                                          │
+│   ┌─────────────┐    ┌─────────────┐    ┌────────────┐   │
+│   │  Auth Flow   │    │  Dashboard   │    │  Tickets   │   │
+│   │  Login/Role  │    │  Home/Inbox  │    │  CRUD/View │   │
+│   └──────┬──────┘    └──────┬──────┘    └─────┬──────┘   │
+│          │                  │                  │          │
+│   ┌──────▼──────────────────▼──────────────────▼──────┐   │
+│   │          NotificationService (FCM Client)         │   │
+│   ├───────────────────────────────────────────────────┤   │
+│   │          Supabase Flutter SDK (Auth/DB/Storage)   │   │
+│   └──────────────────────┬────────────────────────────┘   │
+│           Flutter App    │   (Android + Web)              │
+└──────────────────────────┼────────────────────────────────┘
+                           │ HTTPS
+┌──────────────────────────▼────────────────────────────────┐
+│                    Supabase Cloud                          │
+│                                                           │
+│   ┌─────────────────┐  ┌──────────────────────────────┐   │
+│   │   PostgreSQL     │  │   Edge Function              │   │
+│   │  ┌────────────┐  │  │   send-notification          │   │
+│   │  │ profiles   │  │  │                              │   │
+│   │  │ tickets    │  │  │  ┌────────────────────────┐  │   │
+│   │  │ push_tokens│  │  │  │ 1. Fetch FCM tokens    │  │   │
+│   │  │ room_logs  │  │  │  │ 2. Generate OAuth JWT  │  │   │
+│   │  │ notificati…│  │  │  │ 3. Call FCM v1 API     │  │   │
+│   │  └────────────┘  │  │  │ 4. Auto-clean stale    │  │   │
+│   │                  │  │  └───────────┬────────────┘  │   │
+│   │  Auth / Storage  │  │              │               │   │
+│   └─────────────────┘  └──────────────┼───────────────┘   │
+│                                       │                   │
+└───────────────────────────────────────┼───────────────────┘
+                                        │ HTTPS
+                           ┌────────────▼────────────┐
+                           │  Firebase Cloud Messaging│
+                           │       (FCM v1 API)       │
+                           │                          │
+                           │  → Android Push          │
+                           │  → Web Push              │
+                           └──────────────────────────┘
 ```
 
 ---
@@ -112,25 +187,45 @@
 
 ```
 mfu_fixflow/
-├── lib/
-│   ├── main.dart                      # App entry point
-│   ├── supabase_config.dart           # Supabase config (reads from .env)
-│   ├── firebase_options.dart          # Firebase config (reads from .env)
-│   ├── features/
-│   │   ├── auth/                      # Login & Role Selection
-│   │   ├── dashboard/                 # Home, Notifications, Profile
-│   │   ├── report/                    # Ticket Creation & Details
-│   │   └── admin/                     # User Management, Technician & Manager Views
-│   └── services/
-│       └── notification_service.dart  # FCM Push Notification Handler
-├── supabase/
-│   └── functions/
-│       └── send-notification/         # Edge Function: FCM Dispatcher
-├── android/                           # Android platform
-├── web/                               # Web platform
-├── assets/images/                     # App icons & images
-├── .env.example                       # Environment variable template
-└── pubspec.yaml                       # Dependencies
+│
+├── 📂 lib/
+│   ├── main.dart                          # App entry point & initialization
+│   ├── supabase_config.dart               # Supabase credentials (from .env)
+│   ├── firebase_options.dart              # Firebase credentials (from .env)
+│   │
+│   ├── 📂 features/
+│   │   ├── 📂 auth/
+│   │   │   ├── login_screen.dart          # Email/password login
+│   │   │   └── role_selection_screen.dart  # Post-login role routing
+│   │   │
+│   │   ├── 📂 dashboard/
+│   │   │   └── home_screen.dart           # Main dashboard, notifications, profile
+│   │   │
+│   │   ├── 📂 report/
+│   │   │   ├── report_screen.dart         # Create new ticket with photo
+│   │   │   └── ticket_detail_screen.dart  # View/edit/delete ticket details
+│   │   │
+│   │   └── 📂 admin/
+│   │       ├── user_management_screen.dart # IT Admin: full user CRUD
+│   │       ├── technician_screen.dart      # Technician work queue
+│   │       └── manager_screen.dart         # Manager oversight panel
+│   │
+│   └── 📂 services/
+│       └── notification_service.dart       # FCM init, token management, send API
+│
+├── 📂 supabase/
+│   └── 📂 functions/
+│       └── 📂 send-notification/
+│           └── index.ts                    # Edge Function: FCM v1 dispatcher
+│
+├── 📂 android/                             # Android platform config
+├── 📂 web/                                 # Web platform config
+├── 📂 assets/images/                       # App logo & images
+│
+├── .env.example                            # 🔑 Environment variable template
+├── .gitignore                              # Git exclusion rules
+├── pubspec.yaml                            # Flutter dependencies
+└── README.md                               # You are here!
 ```
 
 ---
@@ -139,83 +234,107 @@ mfu_fixflow/
 
 ### Prerequisites
 
-| Tool | Version |
-|:---|:---|
-| Flutter SDK | ≥ 3.10 |
-| Dart SDK | ≥ 3.10 |
-| Supabase Project | [Create one](https://supabase.com/) |
-| Firebase Project | [Create one](https://console.firebase.google.com/) |
+| Requirement | Version | Link |
+|:---|:---|:---|
+| Flutter SDK | ≥ 3.10 | [Install Flutter](https://docs.flutter.dev/get-started/install) |
+| Dart SDK | ≥ 3.10 | Included with Flutter |
+| Supabase Project | — | [Create Project](https://supabase.com/dashboard) |
+| Firebase Project | — | [Firebase Console](https://console.firebase.google.com/) |
 
-### Installation
+### Quick Start
 
 ```bash
-# 1. Clone the repository
+# 1️⃣ Clone the repository
 git clone https://github.com/Dechawat-Wetprasit/mfu_fixflow.git
 cd mfu_fixflow
 
-# 2. Set up environment variables
+# 2️⃣ Configure environment variables
 cp .env.example .env
-# Edit .env with your actual Supabase & Firebase credentials
+# ✏️ Edit .env with your Supabase & Firebase credentials
 
-# 3. Place Firebase config
-# Download google-services.json from Firebase Console
-# and place it in android/app/
+# 3️⃣ Add Firebase config for Android
+# Download google-services.json from Firebase Console → Project Settings → Android
+# Place it in: android/app/google-services.json
 
-# 4. Install dependencies
+# 4️⃣ Install dependencies
 flutter pub get
 
-# 5. Run the app
-flutter run
+# 5️⃣ Launch the app
+flutter run                    # Default device
+flutter run -d chrome          # Run on Web
+flutter run -d <device_id>     # Run on specific Android device
 ```
 
-### Environment Variables
+### Environment Variables Reference
 
-| Variable | Description |
-|:---|:---|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anonymous/public key |
-| `FIREBASE_API_KEY_WEB` | Firebase Web API key |
-| `FIREBASE_API_KEY_ANDROID` | Firebase Android API key |
-| `FIREBASE_PROJECT_ID` | Firebase project ID |
-| `FIREBASE_MESSAGING_SENDER_ID` | FCM sender ID |
-| `FIREBASE_APP_ID_WEB` | Firebase Web app ID |
-| `FIREBASE_APP_ID_ANDROID` | Firebase Android app ID |
-| `FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
-| `FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
-| `FIREBASE_MEASUREMENT_ID` | Firebase analytics measurement ID |
+Create a `.env` file in the project root with the following variables:
 
-> 📌 See [`.env.example`](.env.example) for the full template.
+| Variable | Required | Description |
+|:---|:---:|:---|
+| `SUPABASE_URL` | ✅ | Supabase project URL |
+| `SUPABASE_ANON_KEY` | ✅ | Supabase anonymous/public API key |
+| `FIREBASE_API_KEY_WEB` | ✅ | Firebase Web API key |
+| `FIREBASE_API_KEY_ANDROID` | ✅ | Firebase Android API key |
+| `FIREBASE_PROJECT_ID` | ✅ | Firebase project identifier |
+| `FIREBASE_MESSAGING_SENDER_ID` | ✅ | FCM sender ID |
+| `FIREBASE_APP_ID_WEB` | ✅ | Firebase Web app ID |
+| `FIREBASE_APP_ID_ANDROID` | ✅ | Firebase Android app ID |
+| `FIREBASE_AUTH_DOMAIN` | ✅ | Firebase authentication domain |
+| `FIREBASE_STORAGE_BUCKET` | ✅ | Firebase storage bucket URL |
+| `FIREBASE_MEASUREMENT_ID` | ⬜ | Google Analytics measurement ID |
+
+> 📌 See [`.env.example`](.env.example) for a ready-to-use template.
 
 ---
 
-## 👥 User Roles
+## 👥 Roles & Permissions
 
-| Role | Permissions |
-|:---|:---|
-| **Student** | Submit tickets, track status, receive notifications |
-| **Manager** | View & manage tickets in assigned building |
-| **Head Manager** | Oversee all buildings, assign work orders |
-| **Technician** | Accept & resolve assigned repair tasks |
-| **Head Technician** | Manage technician team and workload |
-| **IT Admin** | Full system access, user management (CRUD) |
+```
+IT Admin ──────────────────────────────────────────── Full System Access
+    │
+    ├── Head Manager ─────────────────────────── All Buildings
+    │       └── Manager ──────────────────────── Assigned Building
+    │
+    ├── Head Technician ──────────────────────── Team Management
+    │       └── Technician ───────────────────── Assigned Repairs
+    │
+    └── Student ──────────────────────────────── Submit & Track
+```
+
+| Role | Create Ticket | View Tickets | Manage Tickets | Manage Users | Scope |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Student** | ✅ | Own only | ❌ | ❌ | Personal tickets |
+| **Manager** | ❌ | ✅ | ✅ | ❌ | Assigned building |
+| **Head Manager** | ❌ | ✅ | ✅ | ❌ | All buildings |
+| **Technician** | ❌ | ✅ | ✅ Update status | ❌ | Assigned tasks |
+| **Head Technician** | ❌ | ✅ | ✅ | ❌ | Team workload |
+| **IT Admin** | ❌ | ✅ | ✅ | ✅ Full CRUD | Entire system |
 
 ---
 
 ## 🔒 Security
 
-- All sensitive credentials are loaded from `.env` at runtime via [`flutter_dotenv`](https://pub.dev/packages/flutter_dotenv)
-- Firebase config files (`google-services.json`, `firebase_options.dart`) are excluded from version control
-- Supabase Edge Functions use server-side environment secrets
-- Authentication uses PKCE flow for enhanced security
+| Measure | Implementation |
+|:---|:---|
+| **Secret Management** | All credentials loaded at runtime from `.env` via [`flutter_dotenv`](https://pub.dev/packages/flutter_dotenv) |
+| **Git Protection** | `.env`, `google-services.json`, and `firebase_options.dart` are excluded from version control |
+| **Authentication** | PKCE (Proof Key for Code Exchange) flow via Supabase Auth |
+| **Token Security** | Automatic JWT refresh with 5-minute buffer before expiry |
+| **Server-side Secrets** | Supabase Edge Functions use isolated environment variables |
+| **Device Token Hygiene** | Stale/unregistered FCM tokens are auto-deleted from the database |
 
 ---
 
 ## 📄 License
 
-This project was developed as part of a university project at **Mae Fah Luang University**.
+This project was developed as an academic project at **Mae Fah Luang University**, Chiang Rai, Thailand.
 
 ---
 
-<p align="center">
-  <sub>Built with ❤️ using Flutter & Supabase</sub>
-</p>
+<div align="center">
+
+**Built with ❤️ using Flutter & Supabase**
+
+*MFU FixFlow — Making dormitory maintenance effortless*
+
+</div>
