@@ -106,7 +106,7 @@ Traditional dormitory maintenance relies on phone calls, paper forms, or walk-in
 <br><sub>Language</sub>
 </td>
 <td align="center" width="120">
-<img src="https://cf-assets.www.cloudflare.com/slt3lc6tev37/5FpAMKbNmKOY9W8If3JILF/ee09a5d0e9c6fc7e94c5d8f25c6f1e93/supabase-logo-icon_1.svg" width="48" height="48" alt="Supabase" />
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/supabase/supabase-original.svg" width="48" height="48" alt="Supabase" />
 <br><strong>Supabase</strong>
 <br><sub>Backend</sub>
 </td>
